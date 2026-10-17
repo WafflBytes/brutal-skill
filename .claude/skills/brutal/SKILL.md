@@ -17,6 +17,8 @@ What's in it:
 - `Sandbox/`: verification tools. `Sandbox/verify.ps1` runs them all (`references/verification.md`).
 - `%NUGET%` = `%USERPROFILE%\.nuget\packages`.
 
+**Update check (once a session):** in a git clone, run `git -C <home> ls-remote origin main`; if `git -C <home> cat-file -e <hash>^{commit}` fails, a newer skill exists: tell the user and offer `pull --ff-only`. Never pull unasked. Skip if offline.
+
 **Verified against:** `Ahwoo.BRUTAL.*` 2026.10.0–2026.10.4 on .NET 10, Windows x64 only, with `BRUTAL/` source at commit `a25cdf8`. Linux and macOS packages exist but nothing here has been run on them. Last full re-verification: 2026-10-17 (`references/verification.md`).
 
 **Markers:** [RUN] = compiled and executed; [SRC] = checked in source, not executed; [DOC] = from a package README, unverified.

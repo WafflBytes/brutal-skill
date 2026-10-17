@@ -88,7 +88,7 @@ foreach ($p in $all) {
     $hits = Select-String -Path $p -Pattern ([char]0x00A7) -Encoding UTF8
     foreach ($h in $hits) { $problems.Add("$(Split-Path $p -Leaf):$($h.LineNumber) has a section sign from the old guide") }
 }
-$size = (Get-Item $skillMd).Length
+$size = ([IO.File]::ReadAllText($skillMd) -replace "`r", '').Length   # CRLF checkouts must not count extra
 if ($size -gt 20000) { $problems.Add("SKILL.md is $size bytes; keep it under 20000 and move detail into a reference file") }
 
 $refCount = @($refFiles).Count
