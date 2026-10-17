@@ -37,13 +37,20 @@ if (image.Data == null) throw new InvalidOperationException("decode failed"); //
 image.Dispose();
 ```
 
-### glTF
-
-**glTF** [DOC]. `LightData` is nullable.
+### 7.25 glTF: load a .glb and draw it with OpenGL [RUN]
+Namespace `Brutal.GltfApi` (pure .NET). The recipe writes its own tiny .glb, loads it, draws it with OpenGL 4.1 core (`opengl.md`) and checks the pixels.
 ```csharp
-var model = GltfUtility.LoadModel("m.glb");
-var buf = model.LoadBinaryBuffer(0, "m.glb");
+using var loader = new GltfLoader("model.glb");      // parses the JSON; the GLB BIN chunk or .bin files load lazily
+var prim = loader.GltfJson.Meshes[0].Primitives[0];   // check prim.Mode == MeshPrimitive.ModeEnum.Triangles
+var acc = loader.GltfJson.Accessors[prim.Attributes["POSITION"]]; // ComponentType == Accessor.ComponentTypeEnum.Float, Type == Accessor.TypeEnum.Vec3
+var positions = MemoryMarshal.Cast<byte, float3>(loader.GetAccessorBufferSpan(prim.Attributes["POSITION"]));
+var indices = MemoryMarshal.Cast<byte, ushort>(loader.GetAccessorBufferSpan(prim.Indices!.Value)); // or uint: check ComponentType
+// Upload with glBufferData, set glVertexAttribPointer per attribute, then glDrawElements(GL_TRIANGLES, n, GL_UNSIGNED_SHORT, null).
 ```
+- Enum names are PascalCase (`Triangles`, `Vec3`, `UnsignedShort`), not the spec's `TRIANGLES`/`VEC3`.
+- `GetAccessorBufferSpan` doesn't support sparse accessors. For interleaved buffer views it returns `count * stride` bytes, so step by `bufferView.ByteStride`, not by the element size.
+- Node transforms, materials and images: `loader.GltfJson.Nodes`, `.Materials`, `loader.GetOrLoadImage(i)` [SRC]. Axis helpers: `loader.FlipHandedness()`, `SwapYZAxes()`, `Scale(f)` [SRC].
+- Lower level: `GltfUtility.LoadModel("m.glb")` plus `model.LoadBinaryBuffer(0, "m.glb")` [DOC]. There's no Draco decoding.
 
 ## Traps
 

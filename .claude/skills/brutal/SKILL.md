@@ -63,7 +63,7 @@ What's in it:
 | Self-tests, snapshots, Sandbox tools, upgrading packages | `references/verification.md` |
 | Every known trap and bug, one line each | `references/traps.md` |
 
-Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 `core-libs`, 7.5–7.6 `physics`, 7.7 and 7.11–7.13 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16 and 7.18–7.20 `sdl`, 7.10 `assets`, 7.14 `shipping`, 7.17 `opengl`.
+Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 `core-libs`, 7.5, 7.6 and 7.22 `physics`, 7.7 and 7.11–7.13 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16, 7.18–7.20 and 7.24 `sdl`, 7.10 and 7.25 `assets`, 7.14 `shipping`, 7.17 `opengl`, 7.23 `misc`.
 
 ## Quick facts
 
@@ -105,7 +105,7 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
   - SDL renderer: pixel/2D games; runs anywhere, including remote sessions.
   - OpenGL in an SDL window: simple 3D, verified end to end.
   - ImGui (GLFW + OpenGL/Vulkan): debug UI.
-  - Vulkan + Abstractions + VMA: 3D and high performance (windowed path only [SRC]).
+  - Vulkan + Abstractions + VMA: 3D and high performance (windowed swapchain + resize verified, 7.13).
   - Vulkan compute: GPU compute.
   - NotCurses: terminal.
 - **Physics:** Box2D for 2D; Jolt for 3D, using only the exported subset.
@@ -194,7 +194,7 @@ A distributed product must show `BRUTAL game development framework is Copyright 
 ## Keeping this skill current
 
 When you verify something new or find a trap, record it so the next session doesn't rediscover it:
-- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T42, B10), or a marker change to [RUN].
+- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T43, B10), or a marker change to [RUN].
 - Add a one-line row for any new `T#`/`B#` to `references/traps.md`.
 - Add a dated line to the verification log in `references/verification.md`.
 - If it's a runnable recipe, add it to `Sandbox/RecipeCheck` so `Sandbox/verify.ps1` keeps checking it.

@@ -184,6 +184,33 @@ fixed (float* p = buf) SdlMixer.Generate(offline, p, buf.Length * sizeof(float))
 - A working setup is in the `brutal-sdl` template: `Platform/Audio.cs` (device mixer, falls back to silence when `CreateMixerDevice` throws, an offline mixer for `--selftest`), `Platform/TextRenderer.cs` and `Platform/Resources.cs`.
 - Callbacks run on SDL_mixer's audio thread. Exceptions thrown in them are parked and rethrown by the next ergonomic mixer call; during long device playback call `SdlMixer.ThrowPendingCallbackExceptions()` once per frame [SRC].
 
+### 7.24 Gamepads, with a virtual pad for tests [RUN]
+```csharp
+Sdl.Init.Initialize(SdlInitFlags.Gamepad | SdlInitFlags.Events);   // Gamepad implies Joystick
+// Pads arrive as events, including ones already plugged in at start-up:
+//   SdlEventType.GamepadAdded   -> var pad = Sdl.Gamepad.OpenGamepad(ev.gdevice.which);   // throws SdlException
+//   SdlEventType.GamepadRemoved -> Sdl.Gamepad.CloseGamepad(pad)
+short lx = Sdl.Gamepad.GetGamepadAxis(pad, SdlGamepadAxis.Leftx);          // -32768..32767; triggers are 0..32767
+bool a = Sdl.Gamepad.GetGamepadButton(pad, SdlGamepadButton.South);         // South = A on Xbox, Cross on PlayStation
+// Events: SdlEventType.GamepadButtonDown with ev.gbutton.which and .button (a byte; cast to SdlGamepadButton)
+Sdl.Gamepad.RumbleGamepad(pad, low, high, 120);                             // ushort strengths, duration in ms
+```
+**Testing without hardware:** a virtual gamepad goes through the same API and events.
+```csharp
+var desc = new SdlVirtualJoystickDesc {
+    version = (uint)sizeof(SdlVirtualJoystickDesc),     // SDL_INIT_INTERFACE: must be the struct size
+    type = (ushort)SdlJoystickType.Gamepad,             // gets a standard mapping automatically
+    naxes = (ushort)SdlGamepadAxis.Count, nbuttons = 15, name = pName,
+    Rumble = &OnRumble };                               // [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])] static byte OnRumble(void*, ushort, ushort)
+var id = Sdl.Joystick.AttachVirtualJoystick(&desc);
+var joy = Sdl.Gamepad.GetGamepadJoystick(pad);          // borrowed: don't close it (T17)
+Sdl.Joystick.SetJoystickVirtualAxis(joy, (int)SdlGamepadAxis.Leftx, -32768);
+Sdl.Joystick.SetJoystickVirtualButton(joy, (int)SdlGamepadButton.South, true);
+Sdl.Gamepad.UpdateGamepads();                           // or PollEvent; then read the pad as above
+Sdl.Joystick.DetachVirtualJoystick(id);                 // -> GamepadRemoved
+```
+Verified: hot-plug add and remove events, axes, buttons, a button event, and `RumbleGamepad` reaching the device's callback.
+
 ## Traps
 
 | ID | Trap | Fix |

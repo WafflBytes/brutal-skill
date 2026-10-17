@@ -15,7 +15,8 @@ The script prints one PASS/FAIL line per tool, and its exit code is the number o
 
 | Tool | Covers | Checks | Pass means |
 |---|---|---|---|
-| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.21 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
+| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.25 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
+| `VulkanWindow` | Recipe 7.13 | GLFW window + surface, swapchain, render pass, a triangle, a live resize with swapchain rebuild; reads the presented image back before and after | Exit 0. Opens a window for ~3 s; skipped by `verify.ps1 -NoWindow` or `-NoVulkan`. `-- --no-size-check` shows which resize signal the driver sends |
 | `VulkanCompute` | Recipe 7.12 | Squares 1024 indices in a compute shader | Exit 0, `errors = 0`. Picks the discrete GPU; pass `-- <index>` for another one |
 | `ExportAudit` | `references/export-gaps.md` | P/Invoke imports of all 50 packages vs. the win-x64 native export tables | Counts match `references/export-gaps.md`. `-- --detail` adds `missing: <package> <dll>!<entry>` lines; `-- --package jolt` limits it |
 | `AnalyzerDump` | `references/core-libs.md` | Loads the packaged Roslyn analyzers, code fixes and generators | Lists 12 `BRUTALCORE` rules + `InteropHandleGenerator` |
@@ -28,6 +29,8 @@ Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 `lint-skill.ps1` (also run by `verify.ps1`) checks the skill itself: one full entry per trap/bug ID, an index row in `SKILL.md` naming the right file, every reference file linked, and the "next free IDs" note.
 
 ## After upgrading BRUTAL packages
+
+`check-upgrades.ps1` reports every `Ahwoo.BRUTAL.*` version in `Sandbox/` and `Templates/` against nuget.org, and how many commits the BRUTAL mirror is past the verified commit. `-Apply` bumps every version in place (UTF-8, no BOM); then follow steps 3 and 4 below. Exit code 0 = everything current, 1 = updates available or applied.
 
 1. `git -C BRUTAL pull`, then `git -C BRUTAL log --stat <verified commit>..HEAD` to see which packages' source changed (the verified commit is in the `SKILL.md` "Verified against" line). `dotnet package search Ahwoo.BRUTAL --take 100` lists the latest package versions.
 2. Bump `ExportAudit/ExportAudit.csproj` (all 50 `PackageDownload` items) and the `PackageReference`s in the other tools.

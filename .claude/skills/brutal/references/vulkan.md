@@ -132,29 +132,29 @@ using (var mapped = buffer.Map()) { Span<uint> values = mapped.AsSpan<uint>(); }
 // DestroyDescriptorSetLayout, DestroyShaderModule. Then dispose buffer, device, instance.
 ```
 
-### 7.13 Vulkan windowed rendering: step map [SRC; names checked, sequence not executed]
+### 7.13 Vulkan windowed rendering: triangle, swapchain, resize [RUN]
+Runnable copy: `Sandbox/VulkanWindow` (about 600 lines; opens a window for ~3 s). It renders a triangle at 640x400, resizes the window to 900x560, rebuilds the swapchain, and reads the presented image back both times to check the pixels. It follows BRUTAL's own ImGui Vulkan backend (`BRUTAL/Brutal.ImGui.Backends/RendererBackends/VulkanBackend.Helpers.cs:160-320`): a classic render pass, not dynamic rendering.
 
-1. **Window:** `Glfw.Init()`, then `WindowHint(GlfwWindowHint.ClientApi, 0)`, then `CreateWindow`.
-2. **Instance extensions:**
-   - GLFW: `Glfw.GetRequiredInstanceExtensions(out uint n)` returns `byte**`; copy the names into a `HashSet<string>`. Or use `VulkanHelpers.AddSurfaceExtensions(set)`.
-   - SDL: `Sdl.Vulkan.GetInstanceExtensions()` returns `string[]`.
-3. **Surface:**
-   - GLFW: `Glfw.CreateWindowSurface(instance.VkHandle, window, out ulong s)` returns an int VkResult; wrap with `new VkSurfaceKHR((nint)s)`.
-   - SDL: `Sdl.Vulkan.CreateSurface(window, instance.VkHandle)` returns `nint`; the window needs `SdlWindowFlags.Vulkan`.
-4. **Device selection:** `pd.FindQueueFamily(VkQueueFlags.GraphicsBit)`, `pd.GetSurfaceSupportKHR(family, surface)`, `pd.SupportsExtension("VK_KHR_swapchain"u8)`.
-5. **Device:** `pd.CreateDevice(new DeviceEx.CreateInfo { Extensions = { "VK_KHR_swapchain" }, QueueCreateInfos = [...], Next = &features13 })`. Set `dynamicRendering` in `VkPhysicalDeviceVulkan13Features`; chain `Next` by hand.
-6. **Surface queries:** `GetSurfaceCapabilitiesKHR(surface)`, `GetSurfaceFormatsKHR_Count/_Write`, `GetSurfacePresentModesKHR_Count/_Write`.
-7. **Swapchain:** `device.CreateSwapchainKHR(new VkSwapchainCreateInfoKHR {...}, null)`, then `GetSwapchainImagesKHR_Count/_Write`, then `CreateImageView` per image.
-8. **Pipeline:**
-   - `FromSpirv`, `Presets.ShaderStage.*`, `VertexInput.For<TVertex>()`, `CreatePipelineLayout`, `DeviceExtensions.CreateGraphicsPipeline`.
-   - Use dynamic rendering (`BeginRendering`/`EndRendering`).
-   - Not `CreateDefaultRenderPass`: its final layout is `ShaderReadOnlyOptimal`.
-9. **Per frame:**
-   - Wait for and reset the fence.
-   - `AcquireNextImageKHR` **inside try/catch** (T4).
-   - Record: `Begin`, `PipelineBarrier2`, `BeginRendering`, `BindPipeline`, viewport/scissor, `Draw`, `EndRendering`, barrier to `PresentSrcKHR`, `End`.
-   - `queue.Submit`, then `queue.PresentKHR` (also in the try/catch).
-10. **Reference implementation:** `VulkanBackend.Helpers.cs:160-320`.
+1. **Window:** `Glfw.Init()`, `Glfw.WindowHint(GlfwWindowHint.ClientApi, 0)` (no GL context), `Glfw.CreateWindow(...)`.
+2. **Instance:** `var names = Glfw.GetRequiredInstanceExtensions(out var n)` returns `byte**` (`VK_KHR_surface`, `VK_KHR_win32_surface`); copy them with `Marshal.PtrToStringUTF8` into the `HashSet<string>` for `Instance.CreateInfo.EnabledExtensions`. Add validation layers with `VulkanHelpers.AddValidationLayers(layers)` only if `VulkanHelpers.Validation.IsSupported` (needs the Vulkan SDK). SDL alternative: `Sdl.Vulkan.GetInstanceExtensions()` returns `string[]` [SRC].
+3. **Surface:** `Glfw.CreateWindowSurface(instance.VkHandle, window, out ulong s)` returns an int VkResult (0 = success); `new VkSurfaceKHR((nint)s)`. Destroy with `instance.DestroySurfaceKHR(surface, null)` after the swapchain, before the instance. SDL: `Sdl.Vulkan.CreateSurface(window, instance.VkHandle)`, window created with `SdlWindowFlags.Vulkan` [SRC].
+4. **Device:** for each physical device (discrete first), require `pd.SupportsExtension("VK_KHR_swapchain"u8)`, a family from `pd.FindQueueFamily(VkQueueFlags.GraphicsBit)` and `pd.GetSurfaceSupportKHR(family, surface)` (returns `Bool32`). Then `pd.CreateDevice(new DeviceEx.CreateInfo { Extensions = { "VK_KHR_swapchain" }, QueueCreateInfos = [queueInfo] })`.
+5. **Format:** `GetSurfaceFormatsKHR_Count/_Write`; prefer `VkFormat.B8G8R8A8UNorm` + `VkColorSpaceKHR.SRGBNonlinearKHR` (note the capitalisation: `UNorm`, `SRGB`). `VkPresentModeKHR.FifoKHR` is always available (vsync).
+6. **Swapchain:** `var cap = pd.GetSurfaceCapabilitiesKHR(surface)` (returns the struct). Use `cap.CurrentExtent` unless its `Width` is -1. `MinImageCount` = max(`cap.MinImageCount`, 3), clamped to `cap.MaxImageCount` when that isn't 0. Pass the old swapchain as `OldSwapchain`, destroy it after the new one exists. Then `GetSwapchainImagesKHR_Count/_Write`, and one `CreateImageView` + `CreateFramebuffer` per image.
+7. **Render pass:** one colour attachment, `LoadOp = Clear`, `InitialLayout = Undefined`, `FinalLayout = PresentSrcKHR`, and a subpass dependency from `VK.SUBPASS_EXTERNAL` on `ColorAttachmentOutputBit`. It depends only on the format, so it survives resizes. (Don't use `CreateDefaultRenderPass`: its final layout is `ShaderReadOnlyOptimal`.)
+8. **Pipeline:** `ShaderModuleExtensions.FromSpirv` (GLSL via 7.7), `device.CreatePipelineLayout([], [], null)`, `device.CreateGraphicsPipeline(default, new VkGraphicsPipelineCreateInfo { ... RenderPass = renderPass }, null)`. Make **viewport and scissor dynamic** (`VkDynamicState.Viewport`, `.Scissor`) so a resize doesn't rebuild the pipeline. Create every state struct with `new` (T2).
+9. **Per frame (2 frames in flight):**
+   - `WaitForFences([fence[f]], true, nint.MaxValue)`, then `AcquireNextImageKHR(swapchain, nint.MaxValue, imageReady[f], default, out var index)`.
+   - **Reset the fence only after a successful acquire**: if acquire fails and you recreate and return, a reset fence would deadlock the next wait.
+   - Record: `ResetCommandPool`, `Begin`, `BeginRenderPass(..., VkSubpassContents.Inline)`, `BindPipeline`, `SetViewport(0, [...])`, `SetScissor(0, [...])`, `Draw(3, 1, 0, 0)`, `EndRenderPass`, `End`.
+   - `queue.Submit([imageReady[f]], [ColorAttachmentOutputBit], [cmd], [renderDone[index]], fence[f])`. Use **one render-done semaphore per swapchain image**, not per frame in flight: a present can still hold the previous one.
+   - `queue.PresentKHR(new VkPresentInfoKHR { ... })` returns `VkResult`.
+10. **Resize** [RUN]. There are three signals, so handle all of them:
+    - `ErrorOutOfDateKHR` **throws** `VkResultError` from acquire or present (T4): `catch (VkResultError e) when (e.Result == VkResult.ErrorOutOfDateKHR)`.
+    - `SuboptimalKHR` is **returned**, not thrown. On the RX 7900 XTX test machine this was the only signal the driver gave for a resize (twice), so ignoring it leaves a stretched old-size image.
+    - The window's `FramebufferSize` differs from the swapchain extent. Checking this at the top of each frame catches the resize before the driver says anything.
+    - To recreate: wait while the framebuffer is 0x0 (minimised; `Glfw.WaitEvents()`), `device.WaitIdle()`, destroy the views, framebuffers and semaphores, then create the swapchain again with `OldSwapchain`.
+11. **Read-back for tests:** create the swapchain with `ImageUsage = ColorAttachmentBit | TransferSrcBit` (check `cap.SupportedUsageFlags`). After `EndRenderPass`, barrier `PresentSrcKHR -> TransferSrcOptimal`, `CopyImageToBuffer` into a host-visible `BufferEx`, and barrier back to `PresentSrcKHR`. `B8G8R8A8UNorm` reads back in BGRA byte order.
 
 ### Slang
 

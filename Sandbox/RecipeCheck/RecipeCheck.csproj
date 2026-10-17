@@ -11,6 +11,8 @@
     <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Glfw" Version="2026.10.4" />
     <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.RakNet" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Gltf" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Sdl.Image" Version="2026.10.2" />

@@ -36,6 +36,10 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.19", "SDL_ttf", Recipes.SdlTtfRecipe),
     ("7.20", "SDL_mixer", Recipes.SdlMixerRecipe),
     ("7.21", "ImGui on GLFW + OpenGL", noWindow ? () => throw new SkipException("--no-window") : Recipes.ImGuiRecipe),
+    ("7.22", "Box2D contact/hit/sensor events + T42", Recipes.Box2DEventsRecipe),
+    ("7.23", "RakNet loopback client/server", Recipes.RakNetRecipe),
+    ("7.24", "SDL3 gamepad (virtual device)", Recipes.GamepadRecipe),
+    ("7.25", "glTF loaded and drawn with OpenGL", noWindow ? () => throw new SkipException("--no-window") : Recipes.GltfRecipe),
 };
 
 var failed = 0;

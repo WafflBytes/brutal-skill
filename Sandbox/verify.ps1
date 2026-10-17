@@ -31,6 +31,12 @@ if (-not $NoVulkan) {
     Report 'VulkanCompute' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (0 = all values correct)"
 }
 
+if (-not ($NoVulkan -or $NoWindow)) {
+    Write-Host '== VulkanWindow =='
+    dotnet run -c Release --no-build --project VulkanWindow | Out-Host
+    Report 'VulkanWindow' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (triangle, resize, swapchain rebuild, pixels read back)"
+}
+
 Write-Host '== ExportAudit =='
 $audit = dotnet run -c Release --no-build --project ExportAudit
 $audit | Out-Host

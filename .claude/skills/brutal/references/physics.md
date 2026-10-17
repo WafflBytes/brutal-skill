@@ -78,6 +78,23 @@ objVsBp.Dispose(); pairs.Dispose(); bp.Dispose();
 Jolt.UnregisterTypes(); Factory.DestroyInstance();
 ```
 
+### 7.22 Box2D contact, hit and sensor events [RUN]
+Every event flag is **off by default** in `B2ShapeDef.Default`, including on sensors (T42). Opt in per shape:
+```csharp
+var sensor = zone.CreatePolygonShape(B2ShapeDef.Default with { IsSensor = true, EnableSensorEvents = true }, Box2D.MakeBox(2, 0.5f));
+var ball = body.CreateCircleShape(
+    B2ShapeDef.Default with { EnableContactEvents = true, EnableHitEvents = true, EnableSensorEvents = true }, // the visitor opts in too
+    new B2Circle { Center = float2.Zero, Radius = 0.5f });
+world.Step(1 / 60f, 4);
+var c = world.GetContactEvents();          // valid until the next Step
+for (var i = 0; i < c.BeginCount; i++) { ref var e = ref c.BeginEvents[i]; /* e.ShapeIdA, e.ShapeIdB, e.Manifold */ }
+for (var i = 0; i < c.HitCount; i++)   { ref var h = ref c.HitEvents[i];   /* h.Point, h.Normal, h.ApproachSpeed: impact sounds */ }
+// c.EndEvents / c.EndCount work the same way
+var s = world.GetSensorEvents();           // BeginEvents/EndEvents with SensorShapeId, VisitorShapeId
+```
+- `B2Shape` is a record struct, so `==` compares ids. Map shapes back to game objects with `shape.SetUserData(nint)` / `GetUserData()`.
+- Hit events fire only above the world's hit-speed threshold (`world.SetHitEventThreshold`, default 1 m/s).
+
 ## Traps
 
 | ID | Trap | Fix |
@@ -87,6 +104,7 @@ Jolt.UnregisterTypes(); Factory.DestroyInstance();
 | T18 | Jolt teardown out of order is a use-after-free: physics holds raw pointers to the layer tables | Bodies → physics → jobs/temp → filter tables → `UnregisterTypes` → `Factory.DestroyInstance` |
 | T23 | `Box2D.cs:11-16` loads `box2dd` under `#if DEBUG` | Matters only when building from source |
 | T25 | Jolt is "highly experimental"; its API changes between versions | Pin the version and re-run ExportAudit after upgrading |
+| T42 | **Every Box2D event flag defaults to off** in this build: `B2ShapeDef.Default` has `EnableContactEvents`, `EnableHitEvents` and `EnableSensorEvents` all false. Box2D v3.0 defaulted contact events to on, so code written for it silently gets no events. Sensor events need the flag on **both** the sensor and the visitor shape [RUN] | Set the flags in every shape def that should report. `RecipeCheck 7.22` fails if the defaults change |
 | T36 | **Mesh, convex-hull and height-field shapes can't be created in Jolt 2026.10.2.** `MeshShapeSettings.Create(triangles, materials)`, `ConvexHullShapeSettings.Create(points)` and `HeightFieldShapeSettings.Create(samples, …)` resolve and run, but the data never reaches Jolt, so `CreateShape()` throws `JoltException` ("Need triangles to create a mesh shape!", "Need at least 3 points to make a hull", "HeightFieldShape: Sample count too low!" even with 64×64 samples). Every other route is unexported: `Create()`, `MeshShapeSettings.Create(vertices, indexedTriangles)`, `SetTriangleVertices`, `SetIndexedTriangles`, `SetPoints`, `SetHeightSamples`. Same geometry works in upstream Jolt 5.6.0. Reported as [ahwootech/BRUTAL#13](https://github.com/ahwootech/BRUTAL/issues/13); RocketWerkz says it's fixed internally (2026-10-15), not yet released [RUN] | Build level collision from primitives: `StaticCompoundShapeSettings.Create()` + `AddShape(position, rotation, boxSettings)` per piece, then `CreateShape()` [RUN: a ball rests on it]. For terrain, approximate with boxes; for dynamic convex objects, use box/sphere/capsule or a compound of them. On upgrade, `RecipeCheck` check `T36` fails as soon as the bug is fixed |
 
 ## Export gaps
