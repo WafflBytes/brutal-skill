@@ -1,0 +1,5 @@
+BRUTAL game development framework is Copyright (c) 2024 Ahwoo Limited.
+
+This product is built with BRUTAL, a game development framework by Ahwoo Limited, used under the BRUTAL License v1.0.
+
+www.ahwoo.com/brutal

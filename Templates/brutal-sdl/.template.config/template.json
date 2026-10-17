@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "WafflBytes",
+  "classifications": ["Game", "BRUTAL", "SDL"],
+  "identity": "Brutal.Templates.SdlGame",
+  "name": "BRUTAL SDL3 game",
+  "description": "A small playable 2D game on BRUTAL (SDL3 renderer, SDL_ttf text, SDL_mixer sound, Stb, Numerics) with the licence splash, a fixed-step loop, --selftest, --snapshot and single-file publish already working.",
+  "shortName": "brutal-sdl",
+  "sourceName": "BrutalGame",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": ["bin/**", "obj/**", "snapshots/**", "publish/**", ".template.config/**"]
+        }
+      ]
+    }
+  ]
+}

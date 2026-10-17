@@ -1,0 +1,42 @@
+# Sandbox: verification tools for the brutal skill
+
+The knowledge base is the Claude Code skill in `.claude/skills/brutal/` (`SKILL.md` + `references/*.md`). Each tool here reproduces part of it, so its claims can be re-checked on any machine and after every package upgrade.
+
+## Run everything
+
+```powershell
+powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1            # full run (needs a display and a Vulkan GPU)
+powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan   # headless / CI
+```
+
+The script prints one PASS/FAIL line per tool, and its exit code is the number of failures.
+
+## Tools
+
+| Tool | Covers | Checks | Pass means |
+|---|---|---|---|
+| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.20 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
+| `VulkanCompute` | Recipe 7.12 | Squares 1024 indices in a compute shader | Exit 0, `errors = 0`. Picks the discrete GPU; pass `-- <index>` for another one |
+| `ExportAudit` | `references/export-gaps.md` | P/Invoke imports of all 50 packages vs. the win-x64 native export tables | Counts match `references/export-gaps.md`. `-- --detail` adds `missing: <package> <dll>!<entry>` lines; `-- --package jolt` limits it |
+| `AnalyzerDump` | `references/core-libs.md` | Loads the packaged Roslyn analyzers, code fixes and generators | Lists 12 `BRUTALCORE` rules + `InteropHandleGenerator` |
+| `FixedProbe` | `[Fixed]` in `references/core-libs.md` | `Fine.cs` patterns compile and run; `Errors.cs` (with `-p:ProbeErrors=true`) must fail | Default build passes; error build fails with exactly 0009 and 0010 |
+
+Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
+
+`check-template.ps1` (also run by `verify.ps1`) runs `dotnet new brutal-sdl` in a throwaway template hive (nothing is installed for you), then builds with warnings as errors, runs `--selftest`, `--snapshot` and `--smoke`, publishes a single-file exe, and runs it from an empty folder. Add `-Keep` to inspect the generated project.
+
+`lint-skill.ps1` (also run by `verify.ps1`) checks the skill itself: one full entry per trap/bug ID, an index row in `SKILL.md` naming the right file, every reference file linked, and the "next free IDs" note.
+
+## After upgrading BRUTAL packages
+
+1. `git -C BRUTAL pull`, then `git -C BRUTAL log --stat <verified commit>..HEAD` to see which packages' source changed (the verified commit is in the `SKILL.md` "Verified against" line). `dotnet package search Ahwoo.BRUTAL --take 100` lists the latest package versions.
+2. Bump `ExportAudit/ExportAudit.csproj` (all 50 `PackageDownload` items) and the `PackageReference`s in the other tools.
+3. Run `verify.ps1`, then compare ExportAudit's numbers with `references/export-gaps.md`. Jolt changes most often (T25).
+4. Update the "Verified against" line in `SKILL.md` (package versions and the `BRUTAL/` commit) and the verification log in `references/verification.md`. Until you do, `lint-skill.ps1` fails with a reminder that `BRUTAL/` has moved past the verified commit.
+
+## Notes
+
+- `Directory.Build.props` holds the shared settings: `net10.0`, unsafe code, `win-x64`.
+- ExportAudit and AnalyzerDump read the NuGet cache (`%NUGET_PACKAGES%` or `%USERPROFILE%\.nuget\packages`). Restoring ExportAudit downloads every package there.
+- ExportAudit follows the Windows library renames done by package resolvers (`glfw`→`glfw3`, `openal`→`OpenAL32`, `shaderc`→`shaderc_shared`, `vulkan`→`vulkan-1` in System32). FMOD always shows as not found because it ships no binaries (T21).
+- These tools were rebuilt on 2026-10-17 after the originals were lost. Older guide revisions mention `BrutalSmoke`, `VulkanProbe` and `AllPackages`; RecipeCheck and ExportAudit cover what they did.

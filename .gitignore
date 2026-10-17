@@ -1,0 +1,11 @@
+# BRUTAL source is cloned separately (see README)
+/BRUTAL/
+archive/
+
+# Build output and local state
+bin/
+obj/
+*.user
+.vs/
+.claude/settings.local.json
+audit.txt

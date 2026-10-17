@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Lists every analyzer rule, code fix and source generator shipped in Ahwoo.BRUTAL.* packages (skill: references/core-libs.md).
+       Needs the packages in the NuGet cache: restore Sandbox/ExportAudit first. BRUTAL analyzers reference Roslyn 5.0. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
+  </ItemGroup>
+</Project>

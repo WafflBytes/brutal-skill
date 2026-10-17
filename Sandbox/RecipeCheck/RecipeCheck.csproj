@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Runs skill recipes 7.1-7.8, 7.10 (Stb round trip), 7.11 and 7.18-7.20 (SDL satellites). Exit code = number of failed recipes. -->
+  <ItemGroup>
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Collections" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Concurrency" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Box2D" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Jolt" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Glfw" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Image" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.2" />
+  </ItemGroup>
+</Project>

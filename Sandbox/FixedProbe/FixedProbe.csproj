@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    FixedProbe (skill: references/core-libs.md): which [Fixed] patterns the BRUTALCORE analyzers accept.
+      dotnet build Sandbox/FixedProbe                       -> must succeed (Fine.cs only)
+      dotnet build Sandbox/FixedProbe -p:ProbeErrors=true   -> must fail with exactly BRUTALCORE0009 and BRUTALCORE0010
+    Sandbox/verify.ps1 checks both.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Collections" Version="2026.10.1" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ProbeErrors)' != 'true'">
+    <Compile Remove="Errors.cs" />
+  </ItemGroup>
+</Project>
