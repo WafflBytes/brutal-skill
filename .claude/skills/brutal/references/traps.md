@@ -39,6 +39,7 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T38 | `SdlMixer.Generate` returns real-audio bytes, not bytes written | sdl |
 | T39 | No font ships with Sdl.Ttf; bundle a redistributable one | sdl |
 | T40 | `SdlMixer.PlayTrack` resets the loop count; set loops after it | sdl |
+| T41 | Nearly every BRUTAL native DLL needs the VC++ runtime, which Windows doesn't include | shipping |
 | B1 | `PtrOwner.Reset(new)` leaks the old memory | core-libs |
 | B2 | `NativeList.Insert(ByteSize, byte)` never grows the size | core-libs |
 | B3 | Explicit `INativeList.Capacity` gets/sets the size | core-libs |

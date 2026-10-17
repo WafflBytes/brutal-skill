@@ -81,6 +81,14 @@ try {
             Write-Host "-- published exe --crash-test: dialog shown $dialog, error.log written $logged"
             if (-not ($dialog -and $logged)) { $failed++ }
             Remove-Item $crashDir -Recurse -Force -ErrorAction SilentlyContinue
+
+            # VC++ runtime check (trap T41): the dialog must not depend on SDL, which can't load without the runtime.
+            $p = Start-Process -FilePath (Join-Path $empty 'DotChaser.exe') -ArgumentList '--vcruntime-test' -WorkingDirectory $empty -PassThru
+            Start-Sleep -Seconds 3
+            $vcDialog = -not $p.HasExited -and ((Get-Process -Id $p.Id -ErrorAction SilentlyContinue).MainWindowTitle -eq "DotChaser can't start")
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Write-Host "-- published exe --vcruntime-test: missing-runtime dialog shown $vcDialog"
+            if (-not $vcDialog) { $failed++ }
         }
     }
     finally { Pop-Location }

@@ -17,6 +17,7 @@ dotnet run -c Release
 | `--snapshot <dir>` | Plays a scripted session off-screen and saves PNGs (no window needed). Exit code 0 = pass |
 | `--smoke [seconds]` | Runs the real window loop for 4+ s, driven by synthetic SDL key and focus events (move, pause, resume, focus loss, resize), then exits. Exit code 0 = every check passed |
 | `--crash-test` | Raises an error on purpose to show the crash dialog and write the error log |
+| `--vcruntime-test` | Shows the dialog players get when the Microsoft VC++ runtime is missing (checked at every start) |
 
 ## Publish
 

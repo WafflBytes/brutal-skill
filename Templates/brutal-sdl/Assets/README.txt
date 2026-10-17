@@ -13,7 +13,9 @@ How to play
 
 Running it
 ----------
-Double-click BrutalGame.exe. Nothing needs to be installed.
+Double-click BrutalGame.exe. It needs the Microsoft Visual C++ Redistributable (x64), which most
+PCs already have. If it's missing, the game says so and links to the official download:
+https://aka.ms/vs/17/release/vc_redist.x64.exe
 
 Windows may show "Windows protected your PC" (SmartScreen) because the game isn't signed by a
 publisher. Click "More info", then "Run anyway".

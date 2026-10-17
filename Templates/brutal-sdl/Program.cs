@@ -1,4 +1,3 @@
-using Brutal.SdlApi;
 using BrutalGame;
 using BrutalGame.Platform;
 
@@ -8,9 +7,25 @@ using BrutalGame.Platform;
 //   BrutalGame.exe --snapshot <dir>   scripted run drawn off-screen to PNGs, no window needed; exit code 0 = pass
 //   BrutalGame.exe --smoke [seconds]  real window loop with scripted input, then exits; exit code 0 = pass
 //   BrutalGame.exe --crash-test       throws on purpose to show the crash dialog and write the error log
+//   BrutalGame.exe --vcruntime-test   shows the "VC++ runtime missing" dialog as if the runtime weren't installed
 
 if (args.Length > 0 && args[0] == "--selftest")
     return SelfTest.Run();
+
+// The BRUTAL native DLLs (SDL3, SDL_ttf, SDL_mixer, stb, ...) need the Microsoft Visual C++ runtime, which
+// Windows doesn't include and a self-contained .NET publish doesn't bundle (skill trap T41). Without it, the
+// first SDL call fails with "Unable to load DLL 'SDL3' or one of its dependencies".
+if (!NativeDialog.VcRuntimeInstalled() || (args.Length > 0 && args[0] == "--vcruntime-test"))
+{
+    NativeDialog.ShowError(
+        "BrutalGame can't start",
+        "BrutalGame needs the Microsoft Visual C++ Redistributable (x64), which isn't installed on this PC.\n\n"
+            + "Download and install it from Microsoft:\n"
+            + NativeDialog.VcRedistUrl
+            + "\n\nThen start BrutalGame again."
+    );
+    return 3;
+}
 
 if (args.Length > 0 && args[0] == "--snapshot")
     return SnapshotRun.Run(args.Length > 1 ? args[1] : "snapshots");
@@ -42,11 +57,10 @@ catch (Exception e)
     }
     catch (IOException) { } // never let the crash report crash
     catch (UnauthorizedAccessException) { }
-    Sdl.PInvoke.ShowSimpleMessageBox(
-        SdlMessageBoxFlags.Error,
+    // A Win32 dialog, not SDL's: the error may be SDL itself failing to load.
+    NativeDialog.ShowError(
         "BrutalGame stopped",
-        $"Sorry, the game hit an error and has to close.\n\n{e.Message}\n\nDetails were saved to:\n{log}",
-        default
+        $"Sorry, the game hit an error and has to close.\n\n{e.Message}\n\nDetails were saved to:\n{log}"
     );
     return 1;
 }

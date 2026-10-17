@@ -49,12 +49,19 @@ A distributed product **must**:
    In a `dotnet new` template, don't put conditions like `'%(X.Y)' == 'literal'` in a `Condition` attribute: the template engine evaluates `Condition` attributes when it instantiates the project and silently deletes elements it judges false [RUN]. Use item functions such as `WithMetadataValue` instead.
 7. **Fonts and other assets** carry their own licences. Sdl.Ttf ships no font (T39). An SIL OFL font may be embedded and redistributed if its `OFL.txt` ships with the product. The `brutal-sdl` template does all of this: it embeds Atkinson Hyperlegible, ships `OFL-AtkinsonHyperlegible.txt` and `licenses/`, and credits everything in its README.
 
+## Traps
+
+| ID | Trap | Fix |
+|---|---|---|
+| T41 | Nearly every BRUTAL native DLL imports the Microsoft VC++ runtime: `VCRUNTIME140.dll` (SDL3, SDL_image, SDL_mixer, stb, Box2D, GLFW, GLAD, …), plus `VCRUNTIME140_1.dll` (SDL_ttf, ImGui, Jolt, …) and `MSVCP140.dll` (Jolt, RakNet, ShaderC, VMA, Ktx, Gli, Slang). Windows doesn't include them, and a self-contained .NET publish doesn't bundle them (the .NET runtime links its own CRT statically). Most PCs have them from other software, so the game works for you and fails for a friend with "Unable to load DLL 'SDL3' or one of its dependencies". Found by a skill-free eval run, not by our checks, because every dev machine has the runtime [RUN: import tables read with a PE parser] | Check at start-up and point the player to `vc_redist.x64.exe` (template `Platform/NativeDialog.cs`). Bundling the DLLs beside the exe (app-local deployment) is also possible, but the redistribution right comes from your Visual Studio licence, so decide that yourself. List the requirement in the player README |
+
 ## Making a build players can use
 
-- **Crash reporting.** The published exe is `WinExe` (no console), so an unhandled exception just closes the window. Catch it in play mode, write a log under `%LOCALAPPDATA%\<Game>\error.log` (the exe's folder may be read-only), and show `Sdl.PInvoke.ShowSimpleMessageBox(SdlMessageBoxFlags.Error, title, message, default)` [RUN; works before `Sdl.Init`].
-- **A player README.txt beside the exe:** controls, credits (including the FreeType line), and a SmartScreen note. Unsigned exes trigger "Windows protected your PC"; players click "More info", then "Run anyway". Code signing removes the warning but costs money.
+- **Check for the VC++ runtime at start-up (T41).** Before the first SDL call, `NativeLibrary.TryLoad("vcruntime140.dll", ...)` and `vcruntime140_1.dll`; if either fails, show a dialog with the official download link (`https://aka.ms/vs/17/release/vc_redist.x64.exe`) and exit.
+- **Crash reporting.** The published exe is `WinExe` (no console), so an unhandled exception just closes the window. Catch it in play mode, write a log under `%LOCALAPPDATA%\<Game>\error.log` (the exe's folder may be read-only), and show a **Win32** `MessageBoxW` via `[LibraryImport("user32.dll")]` [RUN]. Don't use `Sdl.PInvoke.ShowSimpleMessageBox` here: if the error is SDL failing to load, SDL's dialog fails too and the game closes silently.
+- **A player README.txt beside the exe:** controls, credits (including the FreeType line), the VC++ runtime requirement (T41), and a SmartScreen note. Unsigned exes trigger "Windows protected your PC"; players click "More info", then "Run anyway". Code signing removes the warning but costs money.
 - **One zip** of the publish folder is the easiest thing to send.
 - **Pause on focus loss**, so Alt-Tab doesn't cost a life.
-- The `brutal-sdl` template does all of the above; `Sandbox/check-template.ps1` checks the crash dialog and log and every licence file on the published exe.
+- The `brutal-sdl` template does all of the above; `Sandbox/check-template.ps1` checks the crash dialog and log, the missing-runtime dialog (`--vcruntime-test`), and every licence file on the published exe.
 
 There are no royalties. For logo waivers (non-profit, or where the logo harms the product) or a commercial licence, contact brutal@ahwoo.com.

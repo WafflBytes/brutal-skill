@@ -194,7 +194,7 @@ A distributed product must show `BRUTAL game development framework is Copyright 
 ## Keeping this skill current
 
 When you verify something new or find a trap, record it so the next session doesn't rediscover it:
-- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T41, B10), or a marker change to [RUN].
+- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T42, B10), or a marker change to [RUN].
 - Add a one-line row for any new `T#`/`B#` to `references/traps.md`.
 - Add a dated line to the verification log in `references/verification.md`.
 - If it's a runnable recipe, add it to `Sandbox/RecipeCheck` so `Sandbox/verify.ps1` keeps checking it.
