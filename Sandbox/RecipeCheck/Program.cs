@@ -35,6 +35,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.18", "SDL_image", Recipes.SdlImageRecipe),
     ("7.19", "SDL_ttf", Recipes.SdlTtfRecipe),
     ("7.20", "SDL_mixer", Recipes.SdlMixerRecipe),
+    ("7.21", "ImGui on GLFW + OpenGL", noWindow ? () => throw new SkipException("--no-window") : Recipes.ImGuiRecipe),
 };
 
 var failed = 0;

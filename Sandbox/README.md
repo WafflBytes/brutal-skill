@@ -15,7 +15,7 @@ The script prints one PASS/FAIL line per tool, and its exit code is the number o
 
 | Tool | Covers | Checks | Pass means |
 |---|---|---|---|
-| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.20 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
+| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.21 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
 | `VulkanCompute` | Recipe 7.12 | Squares 1024 indices in a compute shader | Exit 0, `errors = 0`. Picks the discrete GPU; pass `-- <index>` for another one |
 | `ExportAudit` | `references/export-gaps.md` | P/Invoke imports of all 50 packages vs. the win-x64 native export tables | Counts match `references/export-gaps.md`. `-- --detail` adds `missing: <package> <dll>!<entry>` lines; `-- --package jolt` limits it |
 | `AnalyzerDump` | `references/core-libs.md` | Loads the packaged Roslyn analyzers, code fixes and generators | Lists 12 `BRUTALCORE` rules + `InteropHandleGenerator` |

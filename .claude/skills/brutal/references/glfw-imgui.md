@@ -14,7 +14,6 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | ImGui (+Abstractions/Backends/Extensions/FreeType), ImPlot | `Brutal.ImGuiApi*`, `Brutal.ImPlotApi` | imgui, imgui_freetype, implot | — | Gen (ImGui 1.92.2 docking, ImPlot 0.17) | T22 |
 | RenderDoc (+ImGui) | `Brutal.RenderDocApi` | installed RenderDoc | — | Gen+Manual | `RenderDoc.Initialize(new(args))` attaches when run with `--RenderDoc` |
 
-**Not yet verified:** no ImGui recipe has been run here. Start from `BRUTAL/Brutal.ImGui.Backends/` (GLFW platform + OpenGL or Vulkan renderer), and add a recipe once it works.
 
 ## Name translation
 
@@ -47,6 +46,52 @@ window.Dispose(); Glfw.Terminate();
 ```
 - `Glfw.PInvoke.GetVersionString()` → `"3.5.1 Win32 WGL Null EGL OSMesa VisualC DLL"`; `Glfw.VulkanSupported()`.
 - For CI with no display, call `Glfw.SetInitHint(GlfwInitHint.Platform, (int)GlfwPlatform.Null)` before `Init` [RUN]. Window creation and `PollEvents` work with it (`RecipeCheck -- 7.8 --no-window`).
+
+### 7.21 Dear ImGui debug UI on GLFW + OpenGL [RUN]
+Packages `Ahwoo.BRUTAL.ImGui`, `.ImGui.Backends`, `.OpenGl` and `.Glfw`. Namespaces `Brutal.ImGuiApi`, `Brutal.ImGuiApi.Backends`, `Brutal.OpenGlApi`, `Brutal.GlfwApi`. Verified with a hidden window, 4.1 core context, both BRUTAL backends, widgets, and a synthetic click. `RecipeCheck -- 7.21`; set `RECIPECHECK_SHOTS=<dir>` to save the frame as a PNG.
+```csharp
+static GlGetProcAddressFunc? s_glLoader;                        // keep rooted: GLAD keeps the pointer (T35)
+
+Glfw.Init();
+Glfw.WindowHint(GlfwWindowHint.ClientApi, Glfw.Constants.GLFW_OPENGL_API);
+Glfw.WindowHint(GlfwWindowHint.ContextVersionMajor, 4);        // the OpenGL backend needs 4.1+ core (T22)
+Glfw.WindowHint(GlfwWindowHint.ContextVersionMinor, 1);
+Glfw.WindowHint(GlfwWindowHint.OpenGlProfile, Glfw.Constants.GLFW_OPENGL_CORE_PROFILE);
+var window = Glfw.CreateWindow(new GlfwWindow.CreateInfo { Title = "Tool", Size = new int2(1280, 720) });
+Glfw.PInvoke.MakeContextCurrent(window);
+Glfw.PInvoke.SwapInterval(1);
+s_glLoader = name => Glfw.PInvoke.GetProcAddress(name);        // GlGetProcAddressFunc takes byte*
+Glad.Initialize(s_glLoader);
+
+ImGui.CreateContext();
+var io = ImGui.GetIO();
+io.IniFilename = default;                                       // otherwise imgui.ini is written to the working directory
+ImGui.StyleColorsDark();
+var platform = new GlfwBackend(window, GlfwBackend.ClientApi.OpenGL); // hooks the window's input events
+var renderer = new OpenGlBackend();                             // needs the GL context current
+
+while (!window.ShouldClose)
+{
+    Glfw.PollEvents();
+    renderer.NewFrame(); platform.NewFrame(); ImGui.NewFrame(); // this order
+    ImGui.Begin("Debug"u8);                                     // u8 labels (T14); $"..." interpolation also works
+    ImGui.Text($"FPS {io.Framerate:F0}");
+    if (ImGui.Button("Reset"u8, new float2(120, 30))) { /* ... */ }
+    ImGui.SliderFloat("Volume"u8, ref volume, 0, 1);
+    ImGui.Checkbox("Show grid"u8, ref showGrid);
+    ImGui.End();
+    ImGui.Render();
+    var fb = window.FramebufferSize;
+    OpenGl.Native.glViewport(0, 0, fb.X, fb.Y);
+    OpenGl.Native.glClear(OpenGl.GL_COLOR_BUFFER_BIT);         // draw your game here, then the UI on top
+    renderer.RenderDrawData(ImGui.GetDrawData());
+    Glfw.PInvoke.SwapBuffers(window);
+}
+renderer.Dispose(); platform.Dispose(); ImGui.DestroyContext(); window.Dispose(); Glfw.Terminate(); // this order
+```
+- `ImGui.Begin/Button/Checkbox/SliderFloat` take `ref` for in/out values and return `bool`. Pointer types are `*Ptr` structs (`ImGuiIOPtr`, `ImDrawDataPtr`), and their fields are `ref` properties.
+- **Synthetic input for tests** [RUN]: call `io.AddMousePosEvent(x, y)` / `io.AddMouseButtonEvent(0, down)` **after** `platform.NewFrame()` and before `ImGui.NewFrame()`, so the backend's own update can't overwrite it. A click takes two frames: down, then up.
+- **SDL games:** ImGui has no SDL backend here (T22). Use a separate GLFW tool window, or draw debug text with SDL_ttf (`sdl.md` 7.19).
 
 ### RenderDoc
 

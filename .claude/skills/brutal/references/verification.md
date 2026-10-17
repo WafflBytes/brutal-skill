@@ -18,7 +18,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 
 | Tool | What it does |
 |---|---|
-| `RecipeCheck` | Runs 7.1–7.8, 7.10 (Stb round trip + T1), 7.11 and 7.18–7.20 (SDL_image, SDL_ttf, SDL_mixer; T37–T40), asserting each result, plus trap check `T36` (passes while the trap holds, fails when it's fixed upstream). Filter with `-- 7.6`; `--no-window`, `--no-vulkan` |
+| `RecipeCheck` | Runs 7.1–7.8, 7.10 (Stb round trip + T1), 7.11, 7.18–7.20 (SDL_image, SDL_ttf, SDL_mixer; T37–T40) and 7.21 (ImGui; `RECIPECHECK_SHOTS=<dir>` saves its frame), asserting each result, plus trap check `T36` (passes while the trap holds, fails when it's fixed upstream). Filter with `-- 7.6`; `--no-window`, `--no-vulkan` |
 | `VulkanCompute` | Runs 7.12; exit code 0 means correct results. `-- <index>` picks a GPU |
 | `ExportAudit` | Export gaps (`export-gaps.md`) for all 50 packages (`--detail`, `--package <name>`). Restoring it downloads every package |
 | `AnalyzerDump` | Lists every analyzer rule, code fix and generator (`core-libs.md`) |
@@ -50,6 +50,8 @@ All entries are from 2026-10-15:
 2026-10-17: recipes 7.18 SDL_image, 7.19 SDL_ttf and 7.20 SDL_mixer added to `RecipeCheck`. All pass headless (software renderer + offline mixer), and the device mixer step plays on the default output at zero gain. Found T37 (no WEBP and no WEBP detection), T38 (`Generate` return value), T39 (no bundled font) and T40 (`PlayTrack` resets loops; `RecipeCheck` fails if a fix ships upstream).
 
 2026-10-17: template gained TrueType text (embedded Atkinson Hyperlegible, SIL OFL) and SDL_mixer sound effects. `check-template.ps1` passes: 8/8 self-test checks (including the font rendering and every sound decoding and playing on an offline mixer); 5 snapshots, with sharp text at 720p and 1080p; `--smoke` with the device mixer muted and a live resize (text scale 2.00 → 2.50); publish at 38.8 MB with `NOTICE.txt`, `OFL-AtkinsonHyperlegible.txt` and four package notices in `licenses/` (new MSBuild target, `shipping.md`).
+
+2026-10-17: recipe 7.21 (ImGui on GLFW + OpenGL 4.1 core) added to `RecipeCheck` and passing: 204 vertices drawn, and a synthetic click made `Button()` return true exactly once. The frame was checked by eye. Also: the trap index moved from `SKILL.md` to `references/traps.md` (SKILL.md 20.2 → 16.9 KB), and `lint-skill.ps1` now flags control characters, after one had replaced a `\b` in a lookup command.
 
 2026-10-17, real-task eval (`brutal-skill-eval/iteration-1`, outside the repo): two agents built the same Breakout from one user prompt. Both games passed the objective grading. **With the skill:** 9.3 min, 199k tokens, 57 tool calls, 0 build or runtime errors, started from the template. **Baseline:** 20.8 min, 213k tokens, 100 tool calls, 1 build error (the `repeat` byte) and 2 runtime bugs. The baseline wasn't skill-free: subagents inherit the parent session's loaded project instructions, which still held the old single-file guide, so treat it as "skill vs old guide". For a clean baseline, run it as a fresh session in a folder without BRUTAL project instructions. Fixes applied from the eval: crash dialog and log, .NET runtime notices, player README.txt, pause on focus loss, event-driven input that `--smoke` drives with synthetic events (5 checks), SDL struct location and field names, and two template README bugs (double-encoded ©, a dangling NOTICE.md reference).
 

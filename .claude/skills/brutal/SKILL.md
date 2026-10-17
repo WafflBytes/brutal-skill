@@ -28,7 +28,7 @@ What's in it:
 1. Follow the rules below; they prevent the failures that cost the most time.
 2. Pick the reference file for each library you'll touch (table below) and read it before writing code. Each file holds that area's packages, C-to-BRUTAL names, source locations, verified recipes, traps and bugs.
 3. Start from a [RUN] recipe rather than writing from memory.
-4. Check the trap index here before calling an API; read the full entry in the named file.
+4. Check `references/traps.md` before calling an API; read the full entry in the named file.
 5. If something isn't covered, confirm it in source with the lookup protocol, run it once, then record it (see "Keeping this skill current").
 
 ## Rules
@@ -61,8 +61,9 @@ What's in it:
 | Any binding you haven't seen run (export gaps) | `references/export-gaps.md` |
 | Publishing a single-file exe, the licence | `references/shipping.md` |
 | Self-tests, snapshots, Sandbox tools, upgrading packages | `references/verification.md` |
+| Every known trap and bug, one line each | `references/traps.md` |
 
-Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 `core-libs`, 7.5–7.6 `physics`, 7.7 and 7.11–7.13 `vulkan`, 7.8 `glfw-imgui`, 7.9, 7.16 and 7.18–7.20 `sdl`, 7.10 `assets`, 7.14 `shipping`, 7.17 `opengl`.
+Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 `core-libs`, 7.5–7.6 `physics`, 7.7 and 7.11–7.13 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16 and 7.18–7.20 `sdl`, 7.10 `assets`, 7.14 `shipping`, 7.17 `opengl`.
 
 ## Quick facts
 
@@ -147,7 +148,7 @@ Run these from BRUTAL home:
 ```text
 rg -n "public static .*\bCreateTexture\(" BRUTAL/Brutal.Sdl          # does it exist? exact signature
 rg -n "^\s+public [^(]+;" BRUTAL/Brutal.Vulkan/Generated/Structs/VkWriteDescriptorSet.gen.cs   # struct fields (Vulkan: one file per struct)
-rg -n "struct SdlVertex" -A6 BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs               # SDL family: all structs in one Sdl*.Structs.gen.cs
+rg -n "struct SdlVertex\b" -A6 BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs               # SDL family: all structs in one Sdl*.Structs.gen.cs
 rg -n "^\s+\w+ = " BRUTAL/Brutal.Jolt/Generated/Enums/MotionType.gen.cs                      # enum members
 rg -n "^namespace" BRUTAL/Brutal.Core/Pointers/PointerExtensions.cs                           # namespace
 dotnet run -c Release --project Sandbox/ExportAudit -- --detail > audit.txt; rg "missing: .*BoxShape_" audit.txt  # exported? (R2)
@@ -159,9 +160,9 @@ Sources, in priority order:
 3. **`brutal-conventions.md`** inside the Core package (summarised in `references/core-libs.md`).
 4. **The compiled package**: `lib\net10.0\*.dll`, `runtimes\win-x64\native\`, `analyzers\dotnet\cs\`.
 
-## Cross-cutting traps
+## Traps
 
-These apply to every library:
+**Before calling an API, check `references/traps.md`**: one line for every known trap (`T#`) and framework bug (`B#`), naming the reference file that holds the full entry and its fix. The ones below apply to every library, so they're here in full:
 
 | ID | Trap | Fix |
 |---|---|---|
@@ -172,55 +173,6 @@ These apply to every library:
 | T14 | BRUTALCORE0011 warns on `string` where a UTF-8 overload exists (ShaderC, Strings) | `"…"u8`; raw string literals take `u8` too |
 | T16 | SDL/GLFW are main-thread only, with no guard (undefined behaviour) | Keep init, windows and pumps on the main thread |
 | T17 | Handles are values: copies alias. Disposing a borrowed handle (SDL `Get*`, Jolt `GetBodyInterface()`) is a double free. Never dispose Jolt's `Factory` | Dispose only what you `Create`/`Open`, once. For Jolt use `Factory.DestroyInstance()` |
-
-## Trap and bug index
-
-One line each; the full entry (with the fix) is in the named file.
-
-| ID | Summary | File |
-|---|---|---|
-| T1 | `Stb.Load` on a missing/bad file returns `Data == null`, no exception | assets |
-| T2 | Vulkan `sType` is set only by `new T()`, not `default`/`stackalloc`/arrays | vulkan |
-| T3 | Vulkan output spans typed `ReadOnlySpan` are still written | vulkan |
-| T4 | Every failing `VkResult` throws `VkResultError`, including `ErrorOutOfDateKHR` | vulkan |
-| T5 | Vulkan loader is System32 `vulkan-1.dll` only; touching `Vulkan.*` loads it | vulkan |
-| T6 | Declared but not exported (e.g. `BoxShape.Create`) → `EntryPointNotFoundException` | physics |
-| T7 | Jolt README uses `EMotionType`/`EActivation`, which don't exist | physics |
-| T9 | Stock `glfw3.dll` fails; use the packaged fork | glfw-imgui |
-| T11 | Some functions exist only in the raw `Sdl.PInvoke` / `Glfw.PInvoke` layer | sdl |
-| T15 | Vsync over Remote Desktop: `RenderPresent` blocks ~160 ms | sdl |
-| T18 | Jolt teardown out of order is a use-after-free | physics |
-| T19 | Numerics ≠ System.Numerics (`Normalize(zero)` throws, masks, no `half`) | core-libs |
-| T20 | `<None Include="Assets\x">` lands in `bin\…\Assets\` | assets |
-| T21 | FMOD ships no native binaries | audio |
-| T22 | ImGui's platform backend is GLFW only | glfw-imgui |
-| T23 | `Box2D.cs` loads `box2dd` under `#if DEBUG` | physics |
-| T24 | `Platform` throws outside Windows/Linux/macOS | core-libs |
-| T25 | Jolt is "highly experimental"; API changes between versions | physics |
-| T26 | `LogCategory.Make` isn't thread-safe | core-libs |
-| T27 | `NativeList<T>.Count` is an `ElementCount`; use `.Value` | core-libs |
-| T28 | Slang: SPIR-V or source text only; no CPU/LLVM targets | vulkan |
-| T29 | Monitor `Add*` throw on missing directories / second logger | core-libs |
-| T30 | OpenAL Soft is under the GNU Library GPL v2 | audio |
-| T31 | `foreach` over `NativeList<T>` allocates | core-libs |
-| T32 | KTX2/Basis transcodes to BC7 by default | assets |
-| T33 | With vsync the loop runs at the monitor's refresh rate (often 120–240 Hz), not 60 Hz | sdl |
-| T34 | `RumbleGamepadTriggers` returns false on many connections | sdl |
-| T35 | `Glad.Initialize` doesn't root the loader delegate; `glXxx` aliases are package-internal | opengl |
-| T36 | Jolt mesh, convex-hull and height-field shapes can't be created (data dropped; issue #13) | physics |
-| T37 | SDL_image has no WEBP/AVIF/JXL/TIFF; `IsWEBP` is false and loading throws | sdl |
-| T38 | `SdlMixer.Generate` returns real-audio bytes, not bytes written | sdl |
-| T39 | No font ships with Sdl.Ttf; bundle a redistributable one | sdl |
-| T40 | `SdlMixer.PlayTrack` resets the loop count; set loops after it | sdl |
-| B1 | `PtrOwner.Reset(new)` leaks the old memory | core-libs |
-| B2 | `NativeList.Insert(ByteSize, byte)` never grows the size | core-libs |
-| B3 | Explicit `INativeList.Capacity` gets/sets the size | core-libs |
-| B4 | `RandomExtensions.Next*Unit3` clusters at the poles | core-libs |
-| B5 | An exception in `IJob.Run` kills the process | core-libs |
-| B6 | `LString.Format<TWriter>` copies the ref-struct writer | core-libs |
-| B7 | ImGui Vulkan backend's out-of-date checks never run | glfw-imgui |
-| B8 | `NativeList<T>.GetEnumerator` allocates | core-libs |
-| B9 | `Mem` doesn't track memory, despite the conventions doc | core-libs |
 
 ## Verification
 
@@ -243,7 +195,7 @@ A distributed product must show `BRUTAL game development framework is Copyright 
 
 When you verify something new or find a trap, record it so the next session doesn't rediscover it:
 - Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T41, B10), or a marker change to [RUN].
-- Add a one-line row for any new `T#`/`B#` to the index above.
+- Add a one-line row for any new `T#`/`B#` to `references/traps.md`.
 - Add a dated line to the verification log in `references/verification.md`.
 - If it's a runnable recipe, add it to `Sandbox/RecipeCheck` so `Sandbox/verify.ps1` keeps checking it.
 - Run `Sandbox/lint-skill.ps1` to confirm every ID has exactly one entry and every referenced file exists.
