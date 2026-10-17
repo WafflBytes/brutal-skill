@@ -5,13 +5,14 @@
 # - every references/*.md named in SKILL.md exists, and every reference file is named in SKILL.md
 # - no leftover section signs from the old single-file guide, no control characters; SKILL.md stays small
 # - the "next free IDs" note in SKILL.md matches the highest IDs in use
-# - BRUTAL/ (when it is a git clone) is at the commit named in SKILL.md's "Verified against" line
+# - BRUTAL/ (when it is a git clone) at a different commit than SKILL.md's "Verified against" line is a warning, not a failure
 
 $ErrorActionPreference = 'Stop'
 $skill = Join-Path $PSScriptRoot '..\.claude\skills\brutal'
 $skillMd = Join-Path $skill 'SKILL.md'
 $refDir = Join-Path $skill 'references'
 $problems = New-Object System.Collections.Generic.List[string]
+$warnings = New-Object System.Collections.Generic.List[string]
 
 $refFiles = Get-ChildItem $refDir -Filter *.md
 $fileKeys = $refFiles | ForEach-Object { $_.BaseName }
@@ -74,14 +75,14 @@ $named = [regex]::Matches($skillText, 'references/([a-z0-9-]+)\.md') | ForEach-O
 foreach ($n in $named) { if ($fileKeys -notcontains $n) { $problems.Add("SKILL.md names references/$n.md, which doesn't exist") } }
 foreach ($k in $fileKeys) { if ($named -notcontains $k) { $problems.Add("references/$k.md isn't named in SKILL.md, so it will never be read") } }
 
-# Source commit: BRUTAL/ must be at the commit the skill was verified against, so a pull can't silently drift.
+# Source commit: a different BRUTAL/ commit is only a warning (users may run newer source); the maintainer should re-verify before a release.
 $brutal = Join-Path $PSScriptRoot '..\BRUTAL'
 $verified = [regex]::Match($skillText, 'source at commit `([0-9a-f]{7,40})`').Groups[1].Value
 if (-not $verified) { $problems.Add("SKILL.md 'Verified against' line doesn't name a BRUTAL/ commit") }
 elseif (Test-Path (Join-Path $brutal '.git')) {
     $head = (git -C $brutal rev-parse --short=7 HEAD).Trim()
     if (-not $head.StartsWith($verified) -and -not $verified.StartsWith($head)) {
-        $problems.Add("BRUTAL/ is at $head but the skill was verified against $verified. Re-run verify.ps1, review 'git -C BRUTAL log --stat $verified..HEAD', then update SKILL.md")
+        $warnings.Add("BRUTAL/ is at $head but the skill was verified against $verified. Recipes and tables are unverified on newer source. Before a release: re-run verify.ps1, review 'git -C BRUTAL log --stat $verified..HEAD', then update SKILL.md")
     }
 }
 
@@ -101,6 +102,7 @@ $size = ([IO.File]::ReadAllText($skillMd) -replace "`r", '').Length   # CRLF che
 if ($size -gt 20000) { $problems.Add("SKILL.md is $size bytes; keep it under 20000 and move detail into a reference file") }
 
 $refCount = @($refFiles).Count
+$warnings | ForEach-Object { Write-Host "Skill lint WARNING: $_" }
 if ($problems.Count -eq 0) {
     Write-Host "Skill lint: OK ($($entries.Count) trap/bug IDs, $refCount reference files, SKILL.md $size bytes)"
 }

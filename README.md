@@ -21,9 +21,10 @@ Unofficial and community-made. See [NOTICE.md](NOTICE.md).
 | `CLAUDE.md`, `AGENTS.md` | Project instructions for Claude Code and other agents |
 
 Verified against `Ahwoo.BRUTAL.*` 2026.10.x on .NET 10, Windows x64, with the
-BRUTAL source at commit `a25cdf8`. Linux and macOS are untested. If you check
-out a newer BRUTAL commit, `Sandbox/lint-skill.ps1` will tell you the skill needs
-re-verifying.
+BRUTAL source at commit `a25cdf8`. Linux and macOS are untested. A newer BRUTAL
+clone still works, since the skill tells Claude to confirm every API in the
+source, but its recipes and tables were only run against that commit, so treat
+them as unverified on newer source (`Sandbox/lint-skill.ps1` warns about this).
 
 ## Install
 
@@ -36,7 +37,6 @@ Requires [Claude Code](https://claude.com/claude-code), the .NET 10 SDK and
 git clone https://github.com/WafflBytes/brutal-skill
 cd brutal-skill
 git clone https://github.com/ahwootech/BRUTAL BRUTAL
-git -C BRUTAL checkout a25cdf8   # the commit the skill was verified against
 claude
 ```
 
@@ -78,8 +78,16 @@ powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1
 
 ## Updating
 
-`git pull` in your clone. Leave `BRUTAL/` on the pinned commit unless you are
-re-verifying the skill against newer source.
+The skill checks once per session whether a newer version has been published.
+If there is one, Claude tells you and offers to update; it never updates on its
+own. To update by hand, run `git pull --ff-only` in your clone.
+
+The check needs a git clone and network access, and is skipped silently
+otherwise. Anyone who cloned before the check existed needs one manual
+`git pull` to get it.
+
+`BRUTAL/` is a separate clone, so `git pull` doesn't change it. Update it
+with `git -C BRUTAL pull` when you want newer framework source.
 
 ## Licence
 
