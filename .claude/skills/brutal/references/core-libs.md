@@ -134,10 +134,18 @@ m.AddLogger(new LoggerOptions { LogDirectory = "Logs" });
 m.AddCollector(new CollectorOptions { DumpPath = "Dumps", LastChance = DumpType.Mini });
 ```
 
+### 7.26 Numerics quaternion conventions [RUN]
+Same as System.Numerics, checked by `RecipeCheck 7.26`:
+- `a * b` rotates by **b first, then a**. `floatQuat.Concatenate(a, b)` is `b * a`, so it rotates by a first.
+- Right-handed: `CreateFromAxisAngle(+Y, +90 deg)` takes +X to -Z. Rotate a vector with `float3.Transform(v, q)`.
+- `float4x4.CreateFromQuaternion(q)` and `floatQuat.CreateFromRotationMatrix(m)` round-trip for a proper rotation. A basis built by hand (right/up/forward vectors) must be right-handed (determinant +1), or you get garbage (T43).
+- Row-vector convention for matrices: `world = model * view * projection`, `float3.Transform(p, m)`.
+
 ## Traps
 
 | ID | Trap | Fix |
 |---|---|---|
+| T43 | `floatQuat.CreateFromRotationMatrix` assumes a proper rotation. Fed a mirrored (left-handed) basis, as you get from a hand-built right/up/forward with one axis flipped, it returns a **non-unit quaternion** (length 0.707 in the test) with no error. In a 3D eval this made the ramps silently flat [RUN] | Build bases right-handed (`forward = cross(right, up)` order checked) or build the rotation from axis-angle / `CreateFromYawPitchRoll` instead |
 | T19 | Numerics ≠ System.Numerics: `Normalize(zero)` throws; `<`/`>` return `boolN` masks; scalar `CompareTo` throws; `Clamp` follows HLSL when min > max; no `half`. `float4x4` multiply uses `MultiplyAddEstimate`, so it isn't bit-identical across CPUs | `NormalizeOrZero`. Don't rely on bitwise-identical matrix maths for lockstep |
 | T24 | `Platform` throws `PlatformNotSupportedException` outside Windows/Linux/macOS | — |
 | T26 | `LogCategory.Make` uses an unlocked `Dictionary` | Create categories at startup on one thread |

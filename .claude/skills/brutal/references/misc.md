@@ -51,6 +51,36 @@ peer.Shutdown(300);                                   // ms to let the disconnec
 ```
 - Measured: connecting plus one round trip takes about 90 ms on loopback.
 - A real server binds all interfaces, so Windows Firewall will ask the player the first time [SRC]. Mention it in the player README.
+### 7.28 RakNet: full servers, failed connects, leaving, crashing [RUN over 127.0.0.1]
+Checked by `RecipeCheck 7.28`.
+```csharp
+server.SetTimeoutTime(4000, SystemAddress.UNASSIGNED_SYSTEM_ADDRESS); // right after Startup, the same on BOTH ends (T44)
+client.SetTimeoutTime(4000, SystemAddress.UNASSIGNED_SYSTEM_ADDRESS);
+var host = Encoding.UTF8.GetBytes(typedAddress + "\0");              // a typed IP: Connect reads a C string, add the NUL yourself
+client.Connect(host, port, default, null, 0, 4, 250);                // optional: 4 tries x 250 ms (default 12 x 500 ms)
+```
+Message ids to handle (`p->Data[0]`, as `(byte)DefaultMessageIDTypes.X`):
+
+| Id | Who gets it | When |
+|---|---|---|
+| `ConnectionRequestAccepted` | client | connected |
+| `NewIncomingConnection` | server | a client connected |
+| `NoFreeIncomingConnections` | client | the server is full (`SetMaximumIncomingConnections` reached) |
+| `ConnectionAttemptFailed` | client | nobody answered after all the retries (about 6 s by default) |
+| `DisconnectionNotification` | the other side | a polite leave: `Shutdown(ms > 0)` or `CloseConnection(guid, true)` |
+| `ConnectionLost` | the other side | the peer vanished (crash, cable): only after its reliable messages time out (T44) |
+
+- `Shutdown(0)` sends no goodbye, so it's a handy way to simulate a crash in tests.
+- `GetAveragePing(AddressOrGUID.From(guid))` returns ms (12 ms on loopback).
+- **Testing two players on one PC:** bind with `new SocketDescriptor("127.0.0.1", port)` so Windows Firewall doesn't prompt, run two processes (`--host`, `--join 127.0.0.1`), give each test its own port range, and drive both with bots plus a log. Real players need the default all-interfaces bind.
+- Fast-changing state (positions) can go `PacketReliability.UnreliableSequenced`; scores and events `ReliableOrdered`. Put them on different ordering channels (`orderingChannel` 0, 1, ...) so one doesn't hold up the other [SRC].
+- Don't pause an online game on focus loss: the other player is still playing.
+
+## Traps
+
+| ID | Trap | Fix |
+|---|---|---|
+| T44 | **A crashed or unplugged peer is noticed only when a reliable message to it can't be delivered.** If you send it nothing reliable, you never get `ConnectionLost`. The timeout defaults to 10 s (30 s in RakNet debug builds), and RakNet requires the same value on both ends [RUN: 1.2 s with a 1.5 s timeout while sending reliable state] | Set `SetTimeoutTime` on both peers right after `Startup`, and keep sending reliable state or a heartbeat |
 
 ## NotCurses
 

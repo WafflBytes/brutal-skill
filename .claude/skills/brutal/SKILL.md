@@ -63,7 +63,7 @@ What's in it:
 | Self-tests, snapshots, Sandbox tools, upgrading packages | `references/verification.md` |
 | Every known trap and bug, one line each | `references/traps.md` |
 
-Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 `core-libs`, 7.5, 7.6 and 7.22 `physics`, 7.7 and 7.11–7.13 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16, 7.18–7.20 and 7.24 `sdl`, 7.10 and 7.25 `assets`, 7.14 `shipping`, 7.17 `opengl`, 7.23 `misc`.
+Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 and 7.26 `core-libs`, 7.5, 7.6, 7.22 and 7.27 `physics`, 7.7, 7.11–7.13 and 7.29 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16, 7.18–7.20 and 7.24 `sdl`, 7.10 and 7.25 `assets`, 7.14 `shipping`, 7.17 `opengl`, 7.23 and 7.28 `misc`.
 
 ## Quick facts
 
@@ -114,14 +114,19 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
 
 ## Starting a new game
 
-Start from the template rather than an empty project. `Templates/brutal-sdl` is a small playable 2D game (SDL3 renderer, TrueType text, sound effects, Stb, Numerics) with the splash and credits, `NOTICE.txt`, an embedded OFL font, third-party notices copied to `licenses/`, a deterministic `Sim/` layer, a fixed-step loop with vsync/Remote Desktop pacing, `--selftest`, an off-screen `--snapshot`, a windowed `--smoke`, and single-file publish already working. `Sandbox/check-template.ps1` re-verifies it end to end.
+Start from a template rather than an empty project. Both are small playable games with the licence splash and credits, `NOTICE.txt` and every third-party notice, a crash dialog and VC++ runtime check, a deterministic `Sim/` layer on a fixed step, `--selftest`, an off-screen `--snapshot`, a windowed `--smoke` driven by synthetic events, and single-file publish already working. `Sandbox/check-template.ps1 -Template <name>` re-verifies each one end to end.
+
+| Template | For | Stack |
+|---|---|---|
+| `Templates/brutal-sdl` | 2D games | SDL3 renderer, SDL_ttf, SDL_mixer, Stb |
+| `Templates/brutal-3d` | 3D games | SDL3 window + OpenGL 4.1 core, Jolt physics (boxes and spheres; rotated boxes for ramps, see T36), chase camera, TrueType text and the logo as GL textures, SDL_mixer, gamepad |
 
 ```text
-dotnet new install <BRUTAL home>/Templates/brutal-sdl     # once per machine; dotnet new uninstall <same path> removes it
-dotnet new brutal-sdl -n MyGame -o <folder>/MyGame
+dotnet new install <BRUTAL home>/Templates/brutal-sdl      # once per machine (and brutal-3d); dotnet new uninstall <same path> removes it
+dotnet new brutal-3d -n MyGame -o <folder>/MyGame
 ```
 
-Then replace `Sim/World.cs` with your game, keep `Sim/` free of SDL types, and add a self-test check for each rule. The generated `CLAUDE.md` explains the layout and the verify commands. For 3D, add OpenGL (`references/opengl.md`) to the same SDL window.
+Then replace `Sim/` with your game (keep it free of SDL and GL types) and add a self-test check for each rule. The generated `CLAUDE.md` explains the layout and the verify commands. For an online game, remove the template's pause-on-focus-loss (the other player keeps playing) and test with two processes on 127.0.0.1 (`references/misc.md`).
 
 ## Name translation (C/C++ → BRUTAL)
 
@@ -194,7 +199,7 @@ A distributed product must show `BRUTAL game development framework is Copyright 
 ## Keeping this skill current
 
 When you verify something new or find a trap, record it so the next session doesn't rediscover it:
-- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T43, B10), or a marker change to [RUN].
+- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T45, B10), or a marker change to [RUN].
 - Add a one-line row for any new `T#`/`B#` to `references/traps.md`.
 - Add a dated line to the verification log in `references/verification.md`.
 - If it's a runnable recipe, add it to `Sandbox/RecipeCheck` so `Sandbox/verify.ps1` keeps checking it.

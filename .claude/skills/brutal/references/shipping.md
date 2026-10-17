@@ -59,9 +59,15 @@ A distributed product **must**:
 
 - **Check for the VC++ runtime at start-up (T41).** Before the first SDL call, `NativeLibrary.TryLoad("vcruntime140.dll", ...)` and `vcruntime140_1.dll`; if either fails, show a dialog with the official download link (`https://aka.ms/vs/17/release/vc_redist.x64.exe`) and exit.
 - **Crash reporting.** The published exe is `WinExe` (no console), so an unhandled exception just closes the window. Catch it in play mode, write a log under `%LOCALAPPDATA%\<Game>\error.log` (the exe's folder may be read-only), and show a **Win32** `MessageBoxW` via `[LibraryImport("user32.dll")]` [RUN]. Don't use `Sdl.PInvoke.ShowSimpleMessageBox` here: if the error is SDL failing to load, SDL's dialog fails too and the game closes silently.
+- **Credits with no text renderer** (raw Vulkan, a GL app without fonts): bake the credits line into the splash image, or render it once with SDL_ttf (`RenderTextBlended`) and draw it as a texture. Repeat it in the player README.
+- **The VC++ check must cover every runtime DLL your packages import (T41).** The `brutal-sdl` template checks `vcruntime140` and `vcruntime140_1`; add `msvcp140` when you add Jolt, RakNet, ShaderC, VMA, Ktx, Gli or Slang (`brutal-3d` does, for Jolt). Edit `NativeDialog.RequiredVcRuntimeDlls`.
 - **A player README.txt beside the exe:** controls, credits (including the FreeType line), the VC++ runtime requirement (T41), and a SmartScreen note. Unsigned exes trigger "Windows protected your PC"; players click "More info", then "Run anyway". Code signing removes the warning but costs money.
 - **One zip** of the publish folder is the easiest thing to send.
 - **Pause on focus loss**, so Alt-Tab doesn't cost a life.
 - The `brutal-sdl` template does all of the above; `Sandbox/check-template.ps1` checks the crash dialog and log, the missing-runtime dialog (`--vcruntime-test`), and every licence file on the published exe.
+
+## Tooling note: keep files ASCII
+
+Windows PowerShell 5.1 (`powershell.exe`) reads UTF-8 files without a BOM in the ANSI code page. `Get-Content` shows `©` as `Â©`, and `Set-Content` writes the mojibake back plus a BOM. That corrupted a template README once. Keep templates and generated text ASCII (`(c)` rather than `©`, `->` rather than an arrow; `check-template.ps1` enforces it), and edit files with an editor or a UTF-8-aware tool, not a PowerShell 5.1 read/replace/write.
 
 There are no royalties. For logo waivers (non-profit, or where the logo harms the product) or a commercial licence, contact brutal@ahwoo.com.

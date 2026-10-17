@@ -1,0 +1,112 @@
+# Headless run of the Sandbox verification (Sandbox/README.md, "CI"). Runners have no display and no GPU.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 1
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # lint-skill.ps1 compares BRUTAL/ with the commit in SKILL.md's "Verified against" line.
+      - name: Clone BRUTAL at the verified commit
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $commit = [regex]::Match((Get-Content .claude/skills/brutal/SKILL.md -Raw), 'source at commit `([0-9a-f]{7,40})`').Groups[1].Value
+          if (-not $commit) { throw "SKILL.md 'Verified against' line names no BRUTAL commit" }
+          git clone -q https://github.com/ahwootech/BRUTAL BRUTAL
+          git -C BRUTAL checkout -q $commit
+          git -C BRUTAL log --oneline -1
+
+      # Exit code = number of failed checks. Skipped tools and steps print SKIP, never PASS.
+      - name: verify.ps1 -NoWindow -NoVulkan -NoDialog
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog
+
+      # Not a gate: tries the template steps verify.ps1 skipped above (--smoke, crash and VC++ runtime dialogs)
+      # to find out whether the runner's desktop can run them. A failure here only shows as a warning.
+      - name: Probe (non-blocking) - template --smoke and dialogs
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1
+
+  # First verification outside Windows. The Sandbox tools build for linux-x64 through BrutalRid
+  # (Sandbox/Directory.Build.props). Not run here: Vulkan (no GPU or loader), ExportAudit (it audits the win-x64
+  # DLLs, which the Windows job already does) and check-template.ps1 (the template is win-x64 only).
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BrutalRid: linux-x64
+    defaults:
+      run:
+        shell: bash   # explicit bash adds -o pipefail
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Clone BRUTAL at the verified commit
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $commit = [regex]::Match((Get-Content .claude/skills/brutal/SKILL.md -Raw), 'source at commit `([0-9a-f]{7,40})`').Groups[1].Value
+          if (-not $commit) { throw "SKILL.md 'Verified against' line names no BRUTAL commit" }
+          git clone -q https://github.com/ahwootech/BRUTAL BRUTAL
+          git -C BRUTAL checkout -q $commit
+          git -C BRUTAL log --oneline -1
+
+      - name: Build Sandbox (linux-x64)
+        id: build
+        run: dotnet build Sandbox/Sandbox.slnx -c Release -nologo -v quiet
+
+      - name: RecipeCheck --no-window --no-vulkan
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: dotnet run -c Release --no-build --project Sandbox/RecipeCheck -- --no-window --no-vulkan
+
+      - name: AnalyzerDump
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          dotnet run -c Release --no-build --project Sandbox/AnalyzerDump | tee rules.txt
+          test "$(grep -c '^BRUTALCORE[0-9]\{4\}' rules.txt)" -gt 0
+
+      - name: FixedProbe
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          dotnet run -c Release --no-build --project Sandbox/FixedProbe
+          out=$(dotnet build Sandbox/FixedProbe -c Release -nologo -p:ProbeErrors=true 2>&1 || true)   # must fail
+          ids=$(echo "$out" | grep -o 'error BRUTALCORE[0-9]*' | sort -u | cut -d' ' -f2 | xargs || true)
+          echo "error build gave: $ids"
+          test "$ids" = "BRUTALCORE0009 BRUTALCORE0010"
+
+      - name: Skill lint
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: ./Sandbox/lint-skill.ps1

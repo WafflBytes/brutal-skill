@@ -1,0 +1,75 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RootNamespace>BrutalGame3D</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Single-file distributable: dotnet publish -c Release -o publish (brutal skill, recipe 7.14). -->
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <OutputType>WinExe</OutputType>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Jolt" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.OpenGl" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- BRUTAL licence 2.2: the logo is shown before gameplay. Embedded so it can't go missing (T1). -->
+    <EmbeddedResource Include="Assets\logo.png" LogicalName="logo.png" />
+    <!-- BRUTAL licence 2.3: NOTICE.txt ships beside the executable. Link avoids the Assets\ subfolder (T20). -->
+    <None Include="Assets\NOTICE.txt" Link="NOTICE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Font and sounds are embedded too, so a single-file publish stays one exe. -->
+    <EmbeddedResource Include="Assets\Fonts\AtkinsonHyperlegible-Bold.ttf" LogicalName="font.ttf" />
+    <EmbeddedResource Include="Assets\Sounds\*.wav" LogicalName="sounds/%(Filename).wav" />
+    <!-- SIL OFL 1.1: the licence must accompany the font, so it ships beside the exe as well. -->
+    <None Include="Assets\Fonts\OFL.txt" Link="OFL-AtkinsonHyperlegible.txt" CopyToOutputDirectory="PreserveNewest" />
+    <!-- For players: controls, credits (including the FreeType credit its licence asks for) and a SmartScreen note. -->
+    <None Include="Assets\README.txt" Link="README.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    Third-party notices for the native libraries inside the BRUTAL packages (SDL, FreeType, HarfBuzz, stb, ...).
+    Several of those licences require their notice to ship with the product, so every referenced Ahwoo.BRUTAL.*
+    package's LICENSES/*.txt is copied to licenses/ in the build and publish output. Adding a package adds its notices.
+  -->
+  <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">
+    <ItemGroup>
+      <_BrutalPackage Include="@(PackageReference)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('Ahwoo.BRUTAL.'))" />
+      <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/%(_BrutalPackage.Version)/LICENSES/*.txt" />
+      <None Include="@(_BrutalNotice)" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    A self-contained publish bundles the .NET runtime inside the exe. The runtime is MIT-licensed and carries
+    third-party notices, so both ship in licenses/ too (taken from the runtime pack the publish actually used).
+  -->
+  <Target Name="IncludeDotnetRuntimeNotices" BeforeTargets="GetCopyToPublishDirectoryItems" Condition="'$(SelfContained)' == 'true'">
+    <ItemGroup>
+      <!-- Filter with an item function, not a Condition attribute: `dotnet new` evaluates Condition attributes in
+           template project files and deletes elements whose condition looks false (it reads '%(...)' as a literal). -->
+      <_DotnetRuntimePack Include="@(ResolvedRuntimePack->WithMetadataValue('FrameworkName', 'Microsoft.NETCore.App'))" />
+      <ResolvedFileToPublish Include="%(_DotnetRuntimePack.PackageDirectory)\LICENSE.TXT" RelativePath="licenses\DOTNET-RUNTIME-LICENSE.txt" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+      <ResolvedFileToPublish Include="%(_DotnetRuntimePack.PackageDirectory)\THIRD-PARTY-NOTICES.TXT" RelativePath="licenses\DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    </ItemGroup>
+  </Target>
+
+</Project>

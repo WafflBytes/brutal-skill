@@ -7,7 +7,7 @@ A 2D game built on the BRUTAL C# framework (SDL3 renderer, SDL_ttf text, SDL_mix
 ## Layout
 
 - `Sim/`: the game itself. Pure C#, deterministic, fixed 1/60 s step. **No SDL types here** (skill rule R6), so it runs in the self-test.
-  - `World.cs`: game state and rules. `ScreenFlow.cs`: splash → play. `Input.cs`: per-step input. `Rng.cs`: deterministic RNG.
+  - `World.cs`: game state and rules. `ScreenFlow.cs`: splash -> play. `Input.cs`: per-step input. `Rng.cs`: deterministic RNG.
 - `Program.cs`: command-line modes, a start-up check for the VC++ runtime that BRUTAL's native DLLs need (skill trap T41), and the crash handler for play mode (dialog + `%LOCALAPPDATA%\BrutalGame\error.log`; the published exe has no console). `Platform/NativeDialog.cs` shows those dialogs with Win32, not SDL, so they work even when SDL can't load.
 - `Platform/`: everything that touches SDL. `App.cs`: window, events, fixed-step loop, pause (P, and automatically on focus loss), frame pacing, plays sounds from `World` events. Input comes only from SDL events (held keys tracked from KeyDown/KeyUp), so `--smoke` drives the real input path with synthetic events; add new keys in `OnKeyPressed`/`ReadInput` and a scripted check in `SmokeScript`. `Gfx.cs`: drawing. `TextRenderer.cs`: TrueType labels that stay sharp at any window size. `Audio.cs`: SDL_mixer sound effects; silent when there's no audio device. `Resources.cs`: embedded assets. `SnapshotRun.cs`: off-screen scripted run. `Screenshot.cs`: PNG capture.
 - `SelfTest.cs`: headless checks. Add one for every rule you add to `Sim/`.

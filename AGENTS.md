@@ -1,12 +1,12 @@
 # AGENTS.md: BRUTAL framework projects
 
-**Before writing or changing any code that uses BRUTAL, read `.claude/skills/brutal/SKILL.md`.** Then read the file in `.claude/skills/brutal/references/` for each library you'll touch (SDL, OpenGL, Vulkan, physics, and so on; `SKILL.md` has the table). Together they are the verified reference for this codebase: rules, library map, C→BRUTAL name translation, recipes that compiled and ran, runtime traps (T1–T40), framework bugs (B1–B9) and native export gaps. Your training data almost certainly doesn't cover BRUTAL, so don't guess API names. (It's packaged as a Claude Code skill, but it's plain Markdown that any agent can read.)
+**Before writing or changing any code that uses BRUTAL, read `.claude/skills/brutal/SKILL.md`.** Then read the file in `.claude/skills/brutal/references/` for each library you'll touch (SDL, OpenGL, Vulkan, physics, and so on; `SKILL.md` has the table). Together they are the verified reference for this codebase: rules, library map, C→BRUTAL name translation, recipes that compiled and ran, runtime traps (T1–T44), framework bugs (B1–B9) and native export gaps. Your training data almost certainly doesn't cover BRUTAL, so don't guess API names. (It's packaged as a Claude Code skill, but it's plain Markdown that any agent can read.)
 
 ## Layout
 
 - `.claude/skills/brutal/`: the reference (`SKILL.md` + `references/*.md`). Update it there.
 - `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL. It holds the source of every `Ahwoo.BRUTAL.*` package, with no project files. Read it to confirm APIs; don't edit it.
-- `Templates/brutal-sdl/`: the starter game template. New games start from it: `dotnet new install Templates/brutal-sdl`, then `dotnet new brutal-sdl -n MyGame`.
+- `Templates/brutal-sdl/` (2D) and `Templates/brutal-3d/` (OpenGL + Jolt): starter game templates. New games start from one: `dotnet new install Templates/brutal-sdl` (or `brutal-3d`), then `dotnet new brutal-sdl -n MyGame`.
 - `Sandbox/`: verification tools (`RecipeCheck`, `VulkanCompute`, `ExportAudit`, `AnalyzerDump`, `FixedProbe`; see `Sandbox/README.md`). Run all of them, plus the template check and the skill lint, with `powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1`, or one with `dotnet run -c Release --project Sandbox/<Name>`.
 
 ## Critical rules (summary; the skill has the details)

@@ -95,6 +95,45 @@ sealed unsafe class VulkanTriangle : IDisposable
         Expect(_recreations >= 1, $"swapchain recreated {_recreations} time(s)");
         CheckPixels("after resize");
 
+        // 3. Minimise: the loop must keep running (no frames presented) and still react to a close request.
+        // Iconify is a request: the OS may take a while, or refuse while another app is in front. Wait for the
+        // framebuffer to reach 0x0 first; if it never does, report SKIP rather than a false PASS or FAIL.
+        _window.Iconify();
+        var wait = System.Diagnostics.Stopwatch.StartNew();
+        while (!Minimised && wait.ElapsedMilliseconds < 3000)
+        {
+            Glfw.WaitEventsTimeout(0.05);
+            if (wait.ElapsedMilliseconds is > 1000 and < 1060)
+                _window.Iconify(); // ask once more
+        }
+        if (!Minimised)
+            Console.WriteLine($"SKIP minimise checks: the OS didn't minimise the window within 3 s (framebuffer {_window.FramebufferSize.X}x{_window.FramebufferSize.Y})");
+        else
+        {
+            var presentedWhileMinimised = 0;
+            var loops = 0;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < 1500 && !_window.ShouldClose)
+            {
+                Glfw.PollEvents();
+                if (DrawFrame())
+                    presentedWhileMinimised++;
+                loops++;
+                if (sw.ElapsedMilliseconds > 500)
+                    _window.ShouldClose = true; // what the close button does, while minimised
+            }
+            _device.WaitIdle();
+            Console.WriteLine($"minimised after {wait.ElapsedMilliseconds} ms");
+            Expect(presentedWhileMinimised == 0, $"nothing presented while minimised ({presentedWhileMinimised} frames, {loops} loop turns)");
+            Expect(_window.ShouldClose && sw.ElapsedMilliseconds < 1200, $"a close request while minimised ends the loop ({sw.ElapsedMilliseconds} ms)");
+            _window.ShouldClose = false;
+        }
+        _window.Restore();
+        for (var i = 0; i < 100 && Minimised; i++)
+            Glfw.WaitEventsTimeout(0.02);
+        RenderFrames(30);
+        CheckPixels("after restore");
+
         Console.WriteLine($"Frames: {_frame}; recreations {_recreations}; ErrorOutOfDateKHR thrown {_outOfDateThrown}x; SuboptimalKHR returned {_suboptimal}x; present mode {_presentMode}; format {_format.Format}");
         foreach (var f in _failures)
             Console.WriteLine($"FAIL: {f}");
@@ -290,11 +329,14 @@ sealed unsafe class VulkanTriangle : IDisposable
         _renderDone = [];
     }
 
+    bool Minimised => _window.FramebufferSize.X == 0 || _window.FramebufferSize.Y == 0;
+
     void RecreateSwapchain()
     {
-        // A minimised window has a 0x0 framebuffer: wait until it has a size again.
-        while (_window.FramebufferSize.X == 0 || _window.FramebufferSize.Y == 0)
-            Glfw.WaitEvents();
+        // A minimised window has a 0x0 framebuffer and a swapchain can't be 0x0. Don't wait here: that would block
+        // the main loop, so Close and Escape would be ignored until the window is restored. DrawFrame skips instead.
+        if (Minimised)
+            return;
         _device.WaitIdle(); // simplest correct option: nothing may still use the old images
         DestroySwapchainObjects();
         CreateSwapchain(); // passes the old swapchain as OldSwapchain, then destroys it
@@ -440,8 +482,14 @@ sealed unsafe class VulkanTriangle : IDisposable
         _device.WaitIdle();
     }
 
-    void DrawFrame()
+    /// <summary>Renders one frame; returns false (and presents nothing) while the window is minimised.</summary>
+    bool DrawFrame()
     {
+        if (Minimised)
+        {
+            Glfw.WaitEventsTimeout(0.1); // sleep until something happens, but keep the loop (and ShouldClose) alive
+            return false;
+        }
         // A resize doesn't always produce ErrorOutOfDateKHR (Windows often keeps presenting a stretched image),
         // so compare the window's framebuffer size with the swapchain too.
         var fb = _window.FramebufferSize;
@@ -462,7 +510,7 @@ sealed unsafe class VulkanTriangle : IDisposable
         {
             _outOfDateThrown++;
             RecreateSwapchain();
-            return; // the fence wasn't reset, so it stays signalled for the next try
+            return true; // the fence wasn't reset, so it stays signalled for the next try
         }
         _device.ResetFences([_fences[f]]); // only after a successful acquire, or the next wait deadlocks
 
@@ -524,6 +572,7 @@ sealed unsafe class VulkanTriangle : IDisposable
             FinishReadback();
         if (needRecreate)
             RecreateSwapchain();
+        return true;
     }
 
     // Copies the centre pixel and a corner pixel of the rendered image into a host-visible buffer.

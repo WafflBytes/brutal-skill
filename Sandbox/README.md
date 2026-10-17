@@ -6,16 +6,25 @@ The knowledge base is the Claude Code skill in `.claude/skills/brutal/` (`SKILL.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1            # full run (needs a display and a Vulkan GPU)
-powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan   # headless / CI
+powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog   # headless / CI
 ```
 
-The script prints one PASS/FAIL line per tool, and its exit code is the number of failures.
+The script prints one PASS/FAIL/SKIP line per tool, and its exit code is the number of failures. `-NoDialog` makes `check-template.ps1` skip its two message-box checks (it still checks `error.log`). Anything skipped prints SKIP, never PASS.
+
+## CI
+
+`.github/workflows/verify.yml` runs on every push and pull request to `main` (and by hand from the Actions tab). Both jobs clone ahwootech/BRUTAL at the commit in `SKILL.md`'s "Verified against" line, so `lint-skill.ps1` checks it.
+
+- **windows** (`windows-latest`): `verify.ps1 -NoWindow -NoVulkan -NoDialog`, failing on a non-zero exit code. Runners have no GPU, and an interactive desktop isn't guaranteed. A non-blocking probe step then runs `check-template.ps1` without flags, to show whether `--smoke` and the dialogs work there.
+- **linux** (`ubuntu-latest`): builds `Sandbox.slnx` for `linux-x64` (the `BrutalRid` environment variable; locally `-p:BrutalRid=linux-x64`), then runs RecipeCheck `--no-window --no-vulkan`, AnalyzerDump, FixedProbe and the skill lint under `pwsh`. Not run there: Vulkan, ExportAudit (it audits the win-x64 DLLs, which the Windows job covers) and `check-template.ps1` (the template is win-x64 only).
+
+Nothing in CI covers a display or a GPU: run the full `verify.ps1` on a desktop before a release.
 
 ## Tools
 
 | Tool | Covers | Checks | Pass means |
 |---|---|---|---|
-| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.25 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
+| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.28 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
 | `VulkanWindow` | Recipe 7.13 | GLFW window + surface, swapchain, render pass, a triangle, a live resize with swapchain rebuild; reads the presented image back before and after | Exit 0. Opens a window for ~3 s; skipped by `verify.ps1 -NoWindow` or `-NoVulkan`. `-- --no-size-check` shows which resize signal the driver sends |
 | `VulkanCompute` | Recipe 7.12 | Squares 1024 indices in a compute shader | Exit 0, `errors = 0`. Picks the discrete GPU; pass `-- <index>` for another one |
 | `ExportAudit` | `references/export-gaps.md` | P/Invoke imports of all 50 packages vs. the win-x64 native export tables | Counts match `references/export-gaps.md`. `-- --detail` adds `missing: <package> <dll>!<entry>` lines; `-- --package jolt` limits it |
@@ -39,7 +48,7 @@ Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
 ## Notes
 
-- `Directory.Build.props` holds the shared settings: `net10.0`, unsafe code, `win-x64`.
+- `Directory.Build.props` holds the shared settings: `net10.0`, unsafe code, `win-x64` (override with `-p:BrutalRid=<rid>`).
 - ExportAudit and AnalyzerDump read the NuGet cache (`%NUGET_PACKAGES%` or `%USERPROFILE%\.nuget\packages`). Restoring ExportAudit downloads every package there.
 - ExportAudit follows the Windows library renames done by package resolvers (`glfw`→`glfw3`, `openal`→`OpenAL32`, `shaderc`→`shaderc_shared`, `vulkan`→`vulkan-1` in System32). FMOD always shows as not found because it ships no binaries (T21).
 - These tools were rebuilt on 2026-10-17 after the originals were lost. Older guide revisions mention `BrutalSmoke`, `VulkanProbe` and `AllPackages`; RecipeCheck and ExportAudit cover what they did.

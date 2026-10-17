@@ -33,7 +33,7 @@ In the published game, an unhandled error shows a message box and is logged to `
 
 - **BRUTAL** game development framework is Copyright (c) 2024 Ahwoo Limited, used under the BRUTAL License v1.0 (`NOTICE.txt`).
 - **Atkinson Hyperlegible** font, Copyright 2020 Braille Institute of America, Inc., licensed under the SIL Open Font License 1.1 (`OFL-AtkinsonHyperlegible.txt`).
-- **Third-party libraries** inside the BRUTAL packages (SDL3, SDL_ttf with FreeType and HarfBuzz, SDL_mixer, stb): notices in `licenses/`, copied automatically from each referenced package at build time. Portions of this software are copyright © 2023 The FreeType Project (https://freetype.org). All rights reserved. This software is based in part on the work of the FreeType Team.
+- **Third-party libraries** inside the BRUTAL packages (SDL3, SDL_ttf with FreeType and HarfBuzz, SDL_mixer, stb): notices in `licenses/`, copied automatically from each referenced package at build time. Portions of this software are copyright (c) 2023 The FreeType Project (https://freetype.org). All rights reserved. This software is based in part on the work of the FreeType Team.
 - **Sound effects** (`Assets/Sounds/*.wav`) were AI-generated for the `brutal-sdl` template, which is released under the MIT licence, and may be used freely.
 
 If you replace the font, ship the new font's licence instead and update the `.csproj` and this list.

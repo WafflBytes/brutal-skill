@@ -23,6 +23,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 - `glfwInitHint` → `Glfw.SetInitHint(GlfwInitHint.X, v)`.
 - Callbacks are window events (`OnKey`, `OnClose`, `OnCursorPos`, `OnMouseButton`, `OnScroll`, `OnFramebufferSize`, `OnDrop`). Exceptions in them are rethrown from `Glfw.PollEvents()`.
 - Raw layer: `Glfw.PInvoke.*`.
+- Ergonomic wrappers live in both `Manual/` and `Generated/Libraries/` (for example `Glfw.GetRequiredInstanceExtensions` and `Glfw.WaitEventsTimeout` are generated). Search both before concluding a function only exists in the raw layer.
 
 **ImGui:** `ImGui.Begin(ImString name, ref bool open, flags)`. Pointer types become `*Ptr` structs (`ImDrawDataPtr`).
 

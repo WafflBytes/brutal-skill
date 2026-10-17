@@ -78,6 +78,26 @@ objVsBp.Dispose(); pairs.Dispose(); bp.Dispose();
 Jolt.UnregisterTypes(); Factory.DestroyInstance();
 ```
 
+### 7.27 Jolt body tuning, driving a body, determinism [RUN]
+Checked by `RecipeCheck 7.27`, and used by the `brutal-3d` template.
+```csharp
+using (var bcs = BodyCreationSettings.Create(shape, pos, floatQuat.Identity, MotionType.Dynamic, Moving))
+{
+    bcs.SetFriction(1.0f); bcs.SetRestitution(0.3f);
+    bcs.SetLinearDamping(0.25f); bcs.SetAngularDamping(0.6f);
+    bcs.SetMotionQuality(MotionQuality.LinearCast);   // continuous collision: no tunnelling through thin walls at speed
+    bcs.SetAllowSleeping(false);                       // for a body the player can push at any time
+    ball = bodies.CreateAndAddBody(bcs, Activation.Activate);
+}
+bodies.AddLinearAndAngularVelocity(ball, linear, angular);   // drive it; add matching spin so a ball rolls, not slides
+float3 p = bodies.GetPosition(ball); floatQuat q = bodies.GetRotation(ball);
+float3 v = bodies.GetLinearVelocity(ball); float3 w = bodies.GetAngularVelocity(ball);
+bodies.SetPositionRotationAndVelocity(ball, start, floatQuat.Identity, float3.Zero, float3.Zero); // reset
+```
+- **Deterministic here:** two runs with the same inputs gave bit-identical position, rotation and velocity after 120 steps, with a multi-threaded `JobSystemThreadPool`. That's on one machine and build; don't assume it across CPUs for lockstep networking.
+- One `Factory`/`RegisterTypes`, one job system and one temp allocator can serve several `PhysicsSystem`s in one process, one after another.
+- Pickups and triggers without the (unexported) contact listener: check distances in `Sim/` each step (coin within ball radius + coin radius). Ground checks: compare against your own level data. Jolt's ray casts are unexported (export gaps).
+
 ### 7.22 Box2D contact, hit and sensor events [RUN]
 Every event flag is **off by default** in `B2ShapeDef.Default`, including on sensors (T42). Opt in per shape:
 ```csharp

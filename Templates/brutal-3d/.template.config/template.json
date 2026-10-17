@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "WafflBytes",
+  "classifications": [
+    "Game",
+    "BRUTAL",
+    "3D",
+    "OpenGL",
+    "Jolt"
+  ],
+  "identity": "Brutal.Templates.Game3D",
+  "name": "BRUTAL 3D game (OpenGL + Jolt)",
+  "description": "A small playable 3D game on BRUTAL (SDL3 window, OpenGL 4.1 core, Jolt physics, SDL_ttf text, SDL_mixer sound) with the licence splash, a fixed-step loop, chase camera, --selftest, off-screen --snapshot, --smoke, crash and VC++ runtime dialogs, and single-file publish already working.",
+  "shortName": "brutal-3d",
+  "sourceName": "BrutalGame3D",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            "bin/**",
+            "obj/**",
+            "snapshots/**",
+            "publish/**",
+            ".template.config/**"
+          ]
+        }
+      ]
+    }
+  ]
+}

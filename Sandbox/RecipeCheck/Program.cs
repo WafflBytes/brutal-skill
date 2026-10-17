@@ -40,6 +40,9 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.23", "RakNet loopback client/server", Recipes.RakNetRecipe),
     ("7.24", "SDL3 gamepad (virtual device)", Recipes.GamepadRecipe),
     ("7.25", "glTF loaded and drawn with OpenGL", noWindow ? () => throw new SkipException("--no-window") : Recipes.GltfRecipe),
+    ("7.26", "Numerics quaternion conventions", Recipes.QuaternionRecipe),
+    ("7.27", "Jolt body tuning + determinism", Recipes.JoltTuningRecipe),
+    ("7.28", "RakNet failure paths (full, failed, leave, crash)", Recipes.RakNetFailuresRecipe),
 };
 
 var failed = 0;

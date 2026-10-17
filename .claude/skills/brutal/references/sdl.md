@@ -21,6 +21,8 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 - Raw 1:1 layer: `Sdl.PInvoke.<NameWithoutPrefix>`. Audio, GPU, camera, filesystem, threads and timers are raw only.
 - Enums: `SDL_EVENT_KEY_DOWN`→`SdlEventType.KeyDown`, `SDLK_ESCAPE`→`SdlKeycode.Escape`, `SDLK_1`→`SdlKeycode.Num1`, `SDL_PIXELFORMAT_ARGB8888`→`SdlPixelFormat.Argb8888`.
 - Struct and union fields stay **lowercase**: `ev.type`, `ev.key.key`, `ev.key.scancode`, `ev.wheel.y`, `SdlFRect{x,y,w,h}`.
+- Keycodes and scancodes that start with a digit use `Num`/`N`: `SdlKeycode.Num1`, but `SdlScancode.N1` (not `_1`).
+- Synthetic events you push have `windowID == 0`, real ones carry the window's id. In a scripted test, ignore real focus events (`ev.window.windowID != 0`) so another window on the desktop can't interfere.
 - All SDL structs are in one file, `BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs` (not one file per struct as for Vulkan). Common ones: `SdlVertex { position: SdlFPoint, color: SdlFColor, tex_coord: SdlFPoint }`, `SdlFPoint { x, y }`, `SdlFColor { r, g, b, a }` (floats 0..1), `SdlColor { r, g, b, a }` (bytes), `SdlKeyboardEvent { type, windowID, scancode, key, mod, down, repeat }` (`down`/`repeat` are bytes).
 - Handle aliases exist: `window.Show()` is `Sdl.Video.ShowWindow(window)`.
 - **Satellite libraries** have their own static classes, not `Sdl.*`: `SdlImage.*`, `SdlTtf.*`, `SdlMixer.*` (raw layer: `SdlImage.PInvoke.*` and so on). Their ergonomic names **drop the C underscores**: `IMG_Load_IO` → `SdlImage.LoadIO`, `IMG_isWEBP` → `SdlImage.IsWEBP`, `TTF_RenderText_Blended` → `SdlTtf.RenderTextBlended`, `MIX_LoadAudio` → `SdlMixer.LoadAudio`. Their creators throw `SdlException` instead of returning null.

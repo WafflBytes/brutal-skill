@@ -112,6 +112,10 @@ public sealed unsafe class App : IDisposable
                     _confirmPressed = true;
                     break;
                 case SdlEventType.WindowFocusLost:
+                    // --smoke drives pause with its own synthetic event (windowID 0). Ignore real focus changes then:
+                    // another window on the desktop would otherwise pause the game behind the script's back.
+                    if (_smokeSeconds > 0 && ev.window.windowID != 0)
+                        break;
                     // Alt-Tab: stop the game and forget held keys, whose KeyUp goes to the other window.
                     _held.Clear();
                     if (_flow.Current == Screen.Play)

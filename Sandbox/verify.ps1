@@ -1,7 +1,8 @@
 # Runs every Sandbox check (plus the skill lint) and prints a one-line verdict per tool. Exit code = number of failed checks.
-#   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan]
+#   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan] [-NoDialog]
 # -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11 and VulkanCompute.
-param([switch]$NoWindow, [switch]$NoVulkan)
+# -NoDialog: the template check skips its two message-box checks (CI). Skipped tools print SKIP, never PASS.
+param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoDialog)
 
 $ErrorActionPreference = 'Continue'
 Set-Location $PSScriptRoot
@@ -12,6 +13,7 @@ function Report($name, $ok, $note) {
     $script:results += '{0,-4} {1,-14} {2}' -f ($(if ($ok) { 'PASS' } else { 'FAIL' })), $name, $note
     if (-not $ok) { $script:failed++ }
 }
+function Skip($name, $why) { $script:results += '{0,-4} {1,-14} {2}' -f 'SKIP', $name, $why }
 
 Write-Host '== Build (Release) =='
 dotnet build Sandbox.slnx -c Release -nologo -v quiet | Out-Host
@@ -30,12 +32,14 @@ if (-not $NoVulkan) {
     dotnet run -c Release --no-build --project VulkanCompute | Out-Host
     Report 'VulkanCompute' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (0 = all values correct)"
 }
+else { Skip 'VulkanCompute' '-NoVulkan' }
 
 if (-not ($NoVulkan -or $NoWindow)) {
     Write-Host '== VulkanWindow =='
     dotnet run -c Release --no-build --project VulkanWindow | Out-Host
     Report 'VulkanWindow' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (triangle, resize, swapchain rebuild, pixels read back)"
 }
+else { Skip 'VulkanWindow' $(if ($NoVulkan) { '-NoVulkan' } else { '-NoWindow' }) }
 
 Write-Host '== ExportAudit =='
 $audit = dotnet run -c Release --no-build --project ExportAudit
@@ -58,12 +62,17 @@ $expected = 'BRUTALCORE0009 BRUTALCORE0010'
 Report 'FixedProbe' ($fineOk -and (($ids -join ' ') -eq $expected)) "accepted patterns ran; error build gave: $($ids -join ', ')"
 dotnet build FixedProbe -c Release -nologo -v quiet | Out-Null   # leave a clean build behind
 
-Write-Host '== Template =='
-$tplArgs = @()
-if ($NoWindow) { $tplArgs += '-NoWindow' }
-$tpl = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-template.ps1') @tplArgs
-$tpl | Out-Host
-Report 'Template' ($LASTEXITCODE -eq 0) 'dotnet new brutal-sdl: build, selftest, snapshot, publish, run from empty folder'
+foreach ($tplName in 'brutal-sdl', 'brutal-3d') {
+    Write-Host "== Template $tplName =="
+    $tplArgs = @('-Template', $tplName)
+    if ($NoWindow) { $tplArgs += '-NoWindow' }
+    if ($NoDialog) { $tplArgs += '-NoDialog' }
+    $tpl = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-template.ps1') @tplArgs
+    $tpl | Out-Host
+    $tplSkips = @($(if ($NoWindow) { '--smoke' }), $(if ($NoWindow -and $tplName -eq 'brutal-3d') { '--snapshot (GL)' }), $(if ($NoDialog) { 'crash + VC++ runtime dialogs' }) | Where-Object { $_ })
+    $label = if ($tplName -eq 'brutal-sdl') { 'Template' } else { 'Template3D' }
+    Report $label ($LASTEXITCODE -eq 0) ("dotnet new $($tplName): build, selftest, snapshot, publish, run from empty folder" + $(if ($tplSkips) { "; skipped: $($tplSkips -join ', ')" }))
+}
 
 Write-Host '== Skill lint =='
 $lint = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'lint-skill.ps1')

@@ -6,7 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Override for other platforms: -p:BrutalRid=linux-x64 or the BrutalRid environment variable (CI's Linux job). -->
+    <BrutalRid Condition="'$(BrutalRid)' == ''">win-x64</BrutalRid>
+    <RuntimeIdentifier>$(BrutalRid)</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>

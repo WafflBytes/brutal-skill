@@ -15,7 +15,7 @@ This folder holds the knowledge base and verification tools for building on the 
   - `FixedProbe`: shows which `[Fixed]` patterns compile.
   - `check-template.ps1`: instantiates the template and builds, tests, publishes and runs it.
   - `lint-skill.ps1`: checks trap/bug IDs, the index and file links in the skill.
-- `Templates/brutal-sdl/`: the starter game template (`dotnet new brutal-sdl`). It's a real project: build and run it in place, and keep `Sandbox/check-template.ps1` passing after changes.
+- `Templates/brutal-sdl/` (2D) and `Templates/brutal-3d/` (OpenGL + Jolt): the starter game templates (`dotnet new brutal-sdl`, `dotnet new brutal-3d`). They're real projects: build and run them in place, and keep `Sandbox/check-template.ps1 -Template <name>` passing after changes.
 
 ## Working rules for this folder
 

@@ -39,6 +39,8 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T38 | `SdlMixer.Generate` returns real-audio bytes, not bytes written | sdl |
 | T39 | No font ships with Sdl.Ttf; bundle a redistributable one | sdl |
 | T40 | `SdlMixer.PlayTrack` resets the loop count; set loops after it | sdl |
+| T44 | RakNet only notices a vanished peer when a reliable message can't be delivered; set the same `SetTimeoutTime` on both ends | misc |
+| T43 | `floatQuat.CreateFromRotationMatrix` silently returns a non-unit quaternion for a mirrored (left-handed) basis | core-libs |
 | T42 | Box2D contact, hit and sensor events are all off by default; sensors need the flag on both shapes | physics |
 | T41 | Nearly every BRUTAL native DLL needs the VC++ runtime, which Windows doesn't include | shipping |
 | B1 | `PtrOwner.Reset(new)` leaks the old memory | core-libs |

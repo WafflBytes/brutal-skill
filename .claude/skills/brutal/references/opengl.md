@@ -44,6 +44,14 @@ Sdl.PInvoke.GLSwapWindow(window);
 - Post-processing [RUN]: render into an FBO with `glRenderbufferStorageMultisample` colour (`GL_RGBA8`) + depth (`GL_DEPTH_COMPONENT24`), check `glCheckFramebufferStatus == GL_FRAMEBUFFER_COMPLETE`, resolve with `glBlitFramebuffer` into a texture-backed FBO, then draw a full-screen triangle from `gl_VertexID` (empty VAO) with the effect shader. `GlFramebuffer`/`GlRenderbuffer` are record structs; `default` binds the window.
 - Matrices: Write your own column-major `Mat4` (Perspective, LookAt, rotations) for GL. Numerics `float4x4` has both `CreatePerspectiveFieldOfView` and an `operator *(float4x4, float4)`; its convention wasn't verified for GL upload [SRC].
 
+### The `brutal-3d` template [RUN]
+`Templates/brutal-3d` is a working SDL3 + OpenGL 4.1 core + Jolt game. Copy its pieces rather than rewriting them:
+- `Platform/GlWindow.cs`: context attributes, 4x MSAA with a fallback, `Glad.Initialize` with a rooted loader (T35).
+- `Platform/GlText.cs`: SDL_ttf text rendered to a surface, uploaded as a GL texture, re-rasterised on resize.
+- `Platform/Renderer.cs`, `GlUtil.cs`: shaders, meshes, the logo as a GL texture, lighting, fog, a blob shadow.
+- `Platform/SnapshotRun.cs`: off-screen PNGs through a **hidden** SDL GL window and a framebuffer, read with `glReadPixels` (rows flipped). It needs a display, unlike the SDL renderer's surface-based snapshot.
+- `Platform/Mat4.cs`: column-major matrices for GL upload.
+
 ## Traps
 
 | ID | Trap | Fix |
