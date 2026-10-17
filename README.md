@@ -15,10 +15,10 @@ Unofficial and community-made. See [NOTICE.md](NOTICE.md).
 
 Same task (build a Breakout game ready to share), same model, with and without the skill. One run each, so treat it as indicative:
 
-| Run | Time | Build errors |
+| Run | Time |
 |---|---|---|
-| With the skill | 9 min | 0 |
-| Without | 15 min | 0 |
+| With the skill | 9 min |
+| Without | 15 min |
 
 ## What's here
 
