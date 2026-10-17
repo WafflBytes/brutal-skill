@@ -144,7 +144,8 @@ Run these from BRUTAL home:
 
 ```text
 rg -n "public static .*\bCreateTexture\(" BRUTAL/Brutal.Sdl          # does it exist? exact signature
-rg -n "^\s+public [^(]+;" BRUTAL/Brutal.Vulkan/Generated/Structs/VkWriteDescriptorSet.gen.cs   # struct fields
+rg -n "^\s+public [^(]+;" BRUTAL/Brutal.Vulkan/Generated/Structs/VkWriteDescriptorSet.gen.cs   # struct fields (Vulkan: one file per struct)
+rg -n "struct SdlVertex" -A6 BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs               # SDL family: all structs in one Sdl*.Structs.gen.cs
 rg -n "^\s+\w+ = " BRUTAL/Brutal.Jolt/Generated/Enums/MotionType.gen.cs                      # enum members
 rg -n "^namespace" BRUTAL/Brutal.Core/Pointers/PointerExtensions.cs                           # namespace
 dotnet run -c Release --project Sandbox/ExportAudit -- --detail > audit.txt; rg "missing: .*BoxShape_" audit.txt  # exported? (R2)

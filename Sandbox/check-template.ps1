@@ -1,5 +1,5 @@
 # End-to-end check of Templates/brutal-sdl: dotnet new -> build -> --selftest -> --snapshot -> (--smoke) ->
-# single-file publish -> run the published exe from an empty folder. Uses a throwaway template hive, so nothing
+# single-file publish -> run the published exe from an empty folder (selftest, snapshot, crash dialog + log). Uses a throwaway template hive, so nothing
 # is installed for the user. Exit code = number of failed steps.
 #   powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1 [-NoWindow] [-Keep]
 # -NoWindow skips --smoke (needs a display). -Keep leaves the generated project in the temp folder for inspection.
@@ -41,19 +41,19 @@ try {
             Step '--selftest' { dotnet run -c Release --no-build -- --selftest } | Out-Null
             Step '--snapshot' { dotnet run -c Release --no-build -- --snapshot snapshots } | Out-Null
             $pngs = @(Get-ChildItem snapshots -Filter *.png -ErrorAction SilentlyContinue).Count
-            if ($pngs -lt 5) { Write-Host "   expected 5 PNGs, found $pngs"; $failed++ }
-            if (-not $NoWindow) { Step '--smoke 3' { dotnet run -c Release --no-build -- --smoke 3 } | Out-Null }
+            if ($pngs -lt 6) { Write-Host "   expected 6 PNGs, found $pngs"; $failed++ }
+            if (-not $NoWindow) { Step '--smoke 4' { dotnet run -c Release --no-build -- --smoke 4 } | Out-Null }
         }
 
         if (Step 'publish single-file' { dotnet publish -c Release -o publish -nologo | Select-Object -Last 2 }) {
             $files = @(Get-ChildItem publish -File | ForEach-Object Name)
             Write-Host "   publish/: $($files -join ', ')"
-            foreach ($required in 'DotChaser.exe', 'NOTICE.txt', 'OFL-AtkinsonHyperlegible.txt') {
+            foreach ($required in 'DotChaser.exe', 'NOTICE.txt', 'OFL-AtkinsonHyperlegible.txt', 'README.txt') {
                 if ($files -notcontains $required) { Write-Host "   publish must contain $required"; $failed++ }
             }
             $notices = @(Get-ChildItem publish\licenses -Filter *.txt -ErrorAction SilentlyContinue | ForEach-Object Name)
             Write-Host "   publish/licenses/: $($notices -join ', ')"
-            if ($notices.Count -lt 4) { Write-Host '   expected third-party notices for Sdl, Sdl.Ttf, Sdl.Mixer and Stb in publish/licenses/'; $failed++ }
+            if ($notices.Count -lt 6 -or -not ($notices -match 'DOTNET-RUNTIME')) { Write-Host '   expected notices for Sdl, Sdl.Ttf, Sdl.Mixer, Stb and the .NET runtime in publish/licenses/'; $failed++ }
             $size = [math]::Round((Get-Item publish\DotChaser.exe).Length / 1MB, 1)
             Write-Host "   DotChaser.exe: $size MB"
 
@@ -68,7 +68,19 @@ try {
             $p = Start-Process -FilePath (Join-Path $empty 'DotChaser.exe') -ArgumentList '--snapshot', 'shots' -WorkingDirectory $empty -Wait -PassThru
             $shots = @(Get-ChildItem (Join-Path $empty 'shots') -Filter *.png -ErrorAction SilentlyContinue).Count
             Write-Host "-- published exe --snapshot from an empty folder: exit $($p.ExitCode), $shots PNGs"
-            if ($p.ExitCode -ne 0 -or $shots -lt 5) { $failed++ }
+            if ($p.ExitCode -ne 0 -or $shots -lt 6) { $failed++ }
+
+            # Crash reporting: a GUI exe has no console, so errors must reach the player as a dialog plus a log.
+            $crashDir = Join-Path $env:LOCALAPPDATA 'DotChaser'
+            Remove-Item $crashDir -Recurse -Force -ErrorAction SilentlyContinue
+            $p = Start-Process -FilePath (Join-Path $empty 'DotChaser.exe') -ArgumentList '--crash-test' -WorkingDirectory $empty -PassThru
+            Start-Sleep -Seconds 3
+            $dialog = -not $p.HasExited -and ((Get-Process -Id $p.Id -ErrorAction SilentlyContinue).MainWindowTitle -eq 'DotChaser stopped')
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            $logged = (Test-Path (Join-Path $crashDir 'error.log')) -and ((Get-Content (Join-Path $crashDir 'error.log') -Raw) -match 'crash test')
+            Write-Host "-- published exe --crash-test: dialog shown $dialog, error.log written $logged"
+            if (-not ($dialog -and $logged)) { $failed++ }
+            Remove-Item $crashDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
     finally { Pop-Location }

@@ -36,6 +36,25 @@ A distributed product **must**:
    </Target>
    ```
 5. **Sdl.Ttf links FreeType**, whose licence (FTL) also asks for a credit in your documentation: "Portions of this software are copyright © 2023 The FreeType Project (https://freetype.org). All rights reserved." The year matches FreeType 2.13.2 in Sdl.Ttf 2026.10.2; take it from the package's notice file if the version changes.
-6. **Fonts and other assets** carry their own licences. Sdl.Ttf ships no font (T39). An SIL OFL font may be embedded and redistributed if its `OFL.txt` ships with the product. The `brutal-sdl` template does all of this: it embeds Atkinson Hyperlegible, ships `OFL-AtkinsonHyperlegible.txt` and `licenses/`, and credits everything in its README.
+6. **The .NET runtime is bundled** by a self-contained publish, and it's MIT-licensed with its own third-party notices. Ship them too [RUN]:
+   ```xml
+   <Target Name="IncludeDotnetRuntimeNotices" BeforeTargets="GetCopyToPublishDirectoryItems" Condition="'$(SelfContained)' == 'true'">
+     <ItemGroup>
+       <_DotnetRuntimePack Include="@(ResolvedRuntimePack->WithMetadataValue('FrameworkName', 'Microsoft.NETCore.App'))" />
+       <ResolvedFileToPublish Include="%(_DotnetRuntimePack.PackageDirectory)\LICENSE.TXT" RelativePath="licenses\DOTNET-RUNTIME-LICENSE.txt" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+       <ResolvedFileToPublish Include="%(_DotnetRuntimePack.PackageDirectory)\THIRD-PARTY-NOTICES.TXT" RelativePath="licenses\DOTNET-RUNTIME-THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+     </ItemGroup>
+   </Target>
+   ```
+   In a `dotnet new` template, don't put conditions like `'%(X.Y)' == 'literal'` in a `Condition` attribute: the template engine evaluates `Condition` attributes when it instantiates the project and silently deletes elements it judges false [RUN]. Use item functions such as `WithMetadataValue` instead.
+7. **Fonts and other assets** carry their own licences. Sdl.Ttf ships no font (T39). An SIL OFL font may be embedded and redistributed if its `OFL.txt` ships with the product. The `brutal-sdl` template does all of this: it embeds Atkinson Hyperlegible, ships `OFL-AtkinsonHyperlegible.txt` and `licenses/`, and credits everything in its README.
+
+## Making a build players can use
+
+- **Crash reporting.** The published exe is `WinExe` (no console), so an unhandled exception just closes the window. Catch it in play mode, write a log under `%LOCALAPPDATA%\<Game>\error.log` (the exe's folder may be read-only), and show `Sdl.PInvoke.ShowSimpleMessageBox(SdlMessageBoxFlags.Error, title, message, default)` [RUN; works before `Sdl.Init`].
+- **A player README.txt beside the exe:** controls, credits (including the FreeType line), and a SmartScreen note. Unsigned exes trigger "Windows protected your PC"; players click "More info", then "Run anyway". Code signing removes the warning but costs money.
+- **One zip** of the publish folder is the easiest thing to send.
+- **Pause on focus loss**, so Alt-Tab doesn't cost a life.
+- The `brutal-sdl` template does all of the above; `Sandbox/check-template.ps1` checks the crash dialog and log and every licence file on the published exe.
 
 There are no royalties. For logo waivers (non-profit, or where the logo harms the product) or a commercial licence, contact brutal@ahwoo.com.

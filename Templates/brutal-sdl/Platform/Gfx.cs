@@ -21,6 +21,8 @@ public sealed unsafe class Gfx : IDisposable
     readonly TextRenderer.Label _creditsLabel;
     readonly TextRenderer.Label _scoreLabel;
     readonly TextRenderer.Label _helpLabel;
+    readonly TextRenderer.Label _pausedLabel;
+    readonly TextRenderer.Label _pausedHintLabel;
 
     public Gfx(SdlRenderer renderer)
     {
@@ -38,6 +40,8 @@ public sealed unsafe class Gfx : IDisposable
         _creditsLabel = _text.CreateLabel(13);
         _scoreLabel = _text.CreateLabel(18);
         _helpLabel = _text.CreateLabel(12);
+        _pausedLabel = _text.CreateLabel(36);
+        _pausedHintLabel = _text.CreateLabel(14);
     }
 
     static (SdlTexture, int, int) LoadLogo(SdlRenderer renderer)
@@ -70,7 +74,7 @@ public sealed unsafe class Gfx : IDisposable
         }
     }
 
-    public void Frame(ScreenFlow flow, World world)
+    public void Frame(ScreenFlow flow, World world, bool paused = false)
     {
         _text.UpdateScale(); // keeps text sharp after a window resize
         Sdl.Render.SetRenderDrawColor(_r, 12, 12, 16, 255);
@@ -78,7 +82,11 @@ public sealed unsafe class Gfx : IDisposable
         if (flow.Current == Screen.Splash)
             DrawSplash(flow.SplashAlpha);
         else
+        {
             DrawPlay(world);
+            if (paused)
+                DrawPaused();
+        }
     }
 
     void DrawSplash(float alpha)
@@ -110,7 +118,15 @@ public sealed unsafe class Gfx : IDisposable
         );
 
         _scoreLabel.Draw($"Score {world.Score}", 8, 1, 235, 235, 235);
-        _helpLabel.Draw("Arrows/WASD move   R restart   Esc quit", World.ArenaSize.X - 8, 5, 130, 130, 145, align: Align.Right);
+        _helpLabel.Draw("Arrows/WASD move   P pause   R restart   Esc quit", World.ArenaSize.X - 8, 5, 130, 130, 145, align: Align.Right);
+    }
+
+    void DrawPaused()
+    {
+        Sdl.Render.SetRenderDrawColor(_r, 0, 0, 0, 160);
+        Rect(new float2(0, World.HudHeight), World.ArenaSize);
+        _pausedLabel.Draw("Paused", World.ArenaSize.X / 2, World.ArenaSize.Y / 2 - 30, 240, 240, 240, align: Align.Center);
+        _pausedHintLabel.Draw("Press P to continue", World.ArenaSize.X / 2, World.ArenaSize.Y / 2 + 14, 170, 170, 180, align: Align.Center);
     }
 
     void Rect(float2 pos, float2 size)

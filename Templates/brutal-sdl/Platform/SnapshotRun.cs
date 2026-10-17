@@ -68,6 +68,13 @@ public static unsafe class SnapshotRun
                 failures++;
             }
 
+            // The pause overlay over the last play frame.
+            gfx.Frame(flow, world, paused: true);
+            var pausedLit = Screenshot.Save(renderer, Path.Combine(dir, "05_paused.png"));
+            Console.WriteLine($"{(pausedLit > 500 ? "saved" : "BLANK")} 05_paused.png: {pausedLit} lit pixels");
+            if (pausedLit <= 500)
+                failures++;
+
             // The same frame at 1920x1080: text is re-rasterised for the bigger output, so it stays sharp.
             var big = Sdl.PInvoke.CreateSurface(1920, 1080, SdlPixelFormat.Abgr8888);
             var bigRenderer = Sdl.Render.CreateSoftwareRenderer(big);
@@ -75,8 +82,8 @@ public static unsafe class SnapshotRun
             {
                 using var bigGfx = new Gfx(bigRenderer);
                 bigGfx.Frame(flow, world);
-                var lit = Screenshot.Save(bigRenderer, Path.Combine(dir, "05_play_1080p.png"));
-                Console.WriteLine($"{(lit > 500 ? "saved" : "BLANK")} 05_play_1080p.png: {lit} lit pixels");
+                var lit = Screenshot.Save(bigRenderer, Path.Combine(dir, "06_play_1080p.png"));
+                Console.WriteLine($"{(lit > 500 ? "saved" : "BLANK")} 06_play_1080p.png: {lit} lit pixels");
                 if (lit <= 500)
                     failures++;
             }

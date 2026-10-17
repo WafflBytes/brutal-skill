@@ -33,7 +33,7 @@ Requires [Claude Code](https://claude.com/claude-code), the .NET 10 SDK and
 ### Option A: work inside this repo (simplest)
 
 ```bash
-git clone https://github.com/<you>/brutal-skill
+git clone https://github.com/WafflBytes/brutal-skill
 cd brutal-skill
 git clone https://github.com/ahwootech/BRUTAL BRUTAL
 git -C BRUTAL checkout a25cdf8   # the commit the skill was verified against

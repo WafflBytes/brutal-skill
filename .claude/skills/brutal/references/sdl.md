@@ -21,6 +21,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 - Raw 1:1 layer: `Sdl.PInvoke.<NameWithoutPrefix>`. Audio, GPU, camera, filesystem, threads and timers are raw only.
 - Enums: `SDL_EVENT_KEY_DOWN`→`SdlEventType.KeyDown`, `SDLK_ESCAPE`→`SdlKeycode.Escape`, `SDLK_1`→`SdlKeycode.Num1`, `SDL_PIXELFORMAT_ARGB8888`→`SdlPixelFormat.Argb8888`.
 - Struct and union fields stay **lowercase**: `ev.type`, `ev.key.key`, `ev.key.scancode`, `ev.wheel.y`, `SdlFRect{x,y,w,h}`.
+- All SDL structs are in one file, `BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs` (not one file per struct as for Vulkan). Common ones: `SdlVertex { position: SdlFPoint, color: SdlFColor, tex_coord: SdlFPoint }`, `SdlFPoint { x, y }`, `SdlFColor { r, g, b, a }` (floats 0..1), `SdlColor { r, g, b, a }` (bytes), `SdlKeyboardEvent { type, windowID, scancode, key, mod, down, repeat }` (`down`/`repeat` are bytes).
 - Handle aliases exist: `window.Show()` is `Sdl.Video.ShowWindow(window)`.
 - **Satellite libraries** have their own static classes, not `Sdl.*`: `SdlImage.*`, `SdlTtf.*`, `SdlMixer.*` (raw layer: `SdlImage.PInvoke.*` and so on). Their ergonomic names **drop the C underscores**: `IMG_Load_IO` → `SdlImage.LoadIO`, `IMG_isWEBP` → `SdlImage.IsWEBP`, `TTF_RenderText_Blended` → `SdlTtf.RenderTextBlended`, `MIX_LoadAudio` → `SdlMixer.LoadAudio`. Their creators throw `SdlException` instead of returning null.
 
@@ -105,6 +106,9 @@ if (Sdl.Init.InitSubSystem(SdlInitFlags.Audio))     // separate from the main In
 - `SdlEvent` unions used: `ev.gdevice.which` (GamepadAdded/Removed), `ev.gbutton.button` (byte, cast to `SdlGamepadButton`), `ev.key.repeat` (a `byte`, not a `bool`: test `ev.key.repeat == 0`) [RUN].
 - `Sdl.Gamepad.OpenGamepad(id)` throws `SdlException` on failure; `GetGamepadAxis` returns `short` (triggers 0..32767). Already-connected pads arrive as `GamepadAdded` events right after init.
 - Rumble: `Sdl.Gamepad.RumbleGamepad(pad, low, high, ms)` (ushort strengths); re-send each frame with a ~120 ms duration so it stops by itself. `RumbleGamepadTriggers` returns `false` when the connection has no trigger motors (T34).
+
+- **Synthetic input for tests** [RUN]: `var ev = new SdlEvent(); ev.key.type = SdlEventType.KeyDown; ev.key.key = SdlKeycode.Right; ev.key.scancode = SdlScancode.Right; ev.key.down = 1; Sdl.Events.PushEvent(&ev);` (same for `KeyUp`, and `ev.window.type = SdlEventType.WindowFocusLost`). Pushed events go through `PollEvent` like real ones but do **not** change `GetKeyboardState`, so track held keys from KeyDown/KeyUp events if a test needs to drive movement. The template's `--smoke` does this.
+- **Focus loss:** on `SdlEventType.WindowFocusLost`, clear held keys (their KeyUp goes to the other window) and pause.
 
 ### 7.18 SDL_image: load PNG/JPG from memory or file, save, textures [RUN]
 Namespace `Brutal.SdlApi.Image`. No SDL video init needed. Codecs: PNG, JPG, BMP, GIF, QOI, TGA and other dependency-free formats; **not** WEBP, AVIF, JXL or TIFF (T37).
