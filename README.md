@@ -11,6 +11,15 @@ tools to check new claims.
 
 Unofficial and community-made. See [NOTICE.md](NOTICE.md).
 
+## Skill effectiveness
+
+Same task (build a Breakout game ready to share), same model, with and without the skill. One run each, so treat it as indicative:
+
+| Run | Time | Build errors |
+|---|---|---|
+| With the skill | 9 min | 0 |
+| Without | 15 min | 0 |
+
 ## What's here
 
 | Path | What it is |
