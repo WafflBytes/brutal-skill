@@ -181,6 +181,15 @@ Runnable copy: `Sandbox/VulkanTexture` (about 330 lines, off-screen, no window).
 8. **C# detail:** taking `&localStruct` inside a local function or lambda that captured it fails with CS1686. Copy it into a fresh local first.
 9. **Teardown:** destroy the descriptor pool (frees its sets), set layout, sampler, view, then dispose the image.
 
+### 7.31 Vulkan splash: logo + credits line as a textured quad [RUN]
+A raw Vulkan app has no text renderer, but licence 2.1 and 2.2 need the credits notice and the unaltered logo before gameplay (`shipping.md`). Runnable copy: `Sandbox/VulkanSplash` (off-screen, about 400 lines, writes `splash-640x400.png` for a look). Upload and sampling are 7.30; this adds the composition and the draw.
+1. **Compose once on the CPU** into one opaque-black RGBA canvas (the tool uses 760x280): the logo with `Stb.Load(path, 4)` (T1: a missing file returns a null image, so check `IsNull()`), the credits with SDL_ttf. Use `LOGO_BRUTAL_WHT.png` on a dark canvas; the logo must stay unaltered, so scale the whole canvas at draw time, never the logo alone.
+2. **Credits text without a window or SDL_Init:** `SdlTtf.Init()`, `SdlTtf.OpenFont(path, 18)`, `SdlTtf.RenderTextBlended(font, text, 0, white)`, `Sdl.PInvoke.ConvertSurface(surface, SdlPixelFormat.Abgr8888)` (RGBA byte order), then copy rows using `rgba->pitch` (SDL may pad rows), `DestroySurface` on both, `CloseFont`, `SdlTtf.Quit()`. Sdl.Ttf ships no font (T39): embed an OFL font and ship its `OFL.txt` (the `brutal-3d` template's Atkinson Hyperlegible Bold is what the tool loads). The Windows-only alternative is baking `credits.png` once with `System.Drawing` and embedding it.
+3. **Draw:** no vertex buffer. Push constants `{ float4 Rect (x0, y0, x1, y1 in NDC); float4 Params (x = fade) }`; the vertex shader does `gl_Position = vec4(mix(pc.rect.xy, pc.rect.zw, uv), 0, 1)` with uv from `CORNERS[gl_VertexIndex]`, the fragment shader `vec4(texture(tex, vUv).rgb * pc.params.x, 1)`. Letterbox: `scale = min(0.8 * W / canvasW, 0.8 * H / canvasH, 1.5)`, half-size in NDC `(canvasW * scale / W, canvasH * scale / H)`. Recompute it each frame so a resize keeps the aspect ratio.
+4. **Sequence:** draw the splash for a couple of seconds with the fade ramping in and out before the scene's first frame; the credits line also belongs in the player README.
+5. **Checked by pixel:** the quad sits where the letterbox says, the white logo has more than 800 bright pixels, the credits band has more than 150 lit pixels, the gap between them stays black, and fade 0.5 gives 0.50 of the brightness. When a check counts "lit" pixels, count only inside the quad: the clear colour outside it can pass a low threshold (this bit the first run of the tool).
+6. A full Vulkan game template (`brutal-vulkan`) doesn't exist yet; the eval's complete app is outside the repo.
+
 ### Slang
 
 **Slang** [DOC]: legacy compile-request API. `CreateCompileRequest()`, `SetCodeGenTarget(CompileTarget.Spirv)`, then `AddTranslationUnit`, `AddTranslationUnitSourceString`, `AddEntryPoint`, `Compile`.

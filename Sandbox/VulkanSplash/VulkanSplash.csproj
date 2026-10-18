@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Runs skill recipe 7.31 (Vulkan splash: official logo + licence credits line baked into one texture and drawn
+       as a screen-space quad), off-screen with no window. Exit code 0 = every pixel check passed, 2 = no usable GPU
+       or the logo/font assets (BRUTAL/ clone, Templates/brutal-3d) weren't found. -->
+  <ItemGroup>
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="2026.10.2" />
+  </ItemGroup>
+</Project>

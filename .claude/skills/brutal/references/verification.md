@@ -22,6 +22,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 | `VulkanWindow` | Runs 7.13: triangle, live resize, swapchain rebuild, pixels read back before and after. Opens a window for ~3 s; `verify.ps1` skips it with `-NoWindow` or `-NoVulkan` |
 | `VulkanDepth` | Runs 7.29 off-screen (no window): depth buffer, indexed draw, push constants, matrices, culling; pixels read back, plus a depth-off control. Skipped by `-NoVulkan` |
 | `VulkanTexture` | Runs 7.30 off-screen: texture upload, sampler, descriptor set, sampling; pixels read back (orientation, nearest filter, sRGB vs UNorm). Skipped by `-NoVulkan` |
+| `VulkanSplash` | Runs 7.31 off-screen: logo + SDL_ttf credits line in one texture, letterboxed quad, fade; pixels read back and a PNG written for a look. Skipped by `-NoVulkan` |
 | `VulkanCompute` | Runs 7.12; exit code 0 means correct results. `-- <index>` picks a GPU |
 | `ExportAudit` | Export gaps (`export-gaps.md`) for all 50 packages (`--detail`, `--package <name>`). Restoring it downloads every package |
 | `AnalyzerDump` | Lists every analyzer rule, code fix and generator (`core-libs.md`) |
@@ -72,3 +73,5 @@ When you verify something new, add a line here and change its marker to [RUN].
 2026-10-18, TODO Priority 1.1: new `Sandbox/VulkanDepth` (off-screen, no window) runs recipe 7.29 end to end: depth image and depth-tested render pass, vertex/index buffers, push-constant MVP, back-face culling, pixel read-back plus a depth-off control; all 5 checks passed first time on the RX 7900 XTX (no validation layers installed). 7.29 is now plain [RUN]. Found `PhysicalDeviceExtensions.FindSupportedFormat` for the depth-format search.
 
 2026-10-18, TODO Priority 1.2: new `Sandbox/VulkanTexture` (off-screen) runs recipe 7.30: staging upload, layout barriers, sampler, descriptor set, sampling; 7 of 7 pixel checks passed first time on the RX 7900 XTX (orientation, nearest filter, UNorm 128 reads 128, SRGB 128 reads 55). One compile surprise: CS1686 for `&setLayout` inside a local function.
+
+2026-10-18, TODO Priority 1.3 (splash recipe only; no `brutal-vulkan` template yet): new `Sandbox/VulkanSplash` (off-screen) runs recipe 7.31: official logo via Stb plus the credits line via SDL_ttf in one texture, letterboxed quad, fade; 6 of 6 pixel checks pass on the RX 7900 XTX and the written PNG was looked at. The one failure on the first run was a bug in the check itself (the clear colour counted as lit), not in the recipe.
