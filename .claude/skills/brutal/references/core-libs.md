@@ -141,15 +141,26 @@ coins.Format("Ann", 3);                             // fr "{Count} pieces pour {
 - `Format(writer, ...)` into a `RingBufferWriter<char>`: the writer is copied (B6), so a second call overwrites the first result. Format to `string`, or pass a class writer (the recipe's `ArrayCharWriter`), which advances.
 - Not run: the `LStrings` singleton, ResX files on disk, more than two variables, thread safety.
 
-### Monitor (crash dumps, ring logger)
-
-**Monitor** [DOC]. The directories must already exist; call each `Add*` once.
+### 7.39 Monitor: crash dumps, ring logger [RUN]
+Packages `Ahwoo.BRUTAL.Monitor.Host` (pulls in `.Common`); checked by `RecipeCheck 7.39`, which crashes child processes for real. The directories must already exist; call each `Add*` once (T29).
 ```csharp
-using Monitor = Brutal.Monitor.Monitor;
-using var m = new Monitor("game", LogLevel.Information);
+using Brutal.Monitor.Common;
+using Monitor = Brutal.Monitor.Monitor;              // clashes with System.Threading.Monitor
+Directory.CreateDirectory("Logs"); Directory.CreateDirectory("Dumps");
+using var m = new Monitor("game", LogLevel.Information); // first thing in Main; a plain file name
 m.AddLogger(new LoggerOptions { LogDirectory = "Logs" });
 m.AddCollector(new CollectorOptions { DumpPath = "Dumps", LastChance = DumpType.Mini });
+LogSystem.Initialize(b => b.AddProvider(m.LogProvider)); // or LogCategory lines never reach the file
+if (!m.SubprocessRunning) { /* no crash dumps this session; T52 after a single-file publish */ }
 ```
+- **Wire it into `Brutal.Logging` yourself.** `m.LogProvider` is an `ILoggerProvider` that nothing registers; `LogCategory` lines logged before `LogSystem.Initialize(b => b.AddProvider(m.LogProvider))` were not in the log or the crash tail. `m.LogProvider.CreateLogger("X")` works without it. Add a console provider in the same builder if you want both.
+- Files (`<stem>` = `<name>.<yyMMdd-HHmmss>.<pid>`, the process start time): `Logs/<stem>.log` and `Logs/<stem>.log.ring` (the crash-tail ring, 1024 slots of 4 KB). A clean `Dispose` deletes the ring. Without a `LogFormatter` a line is the bare message, with no level, category or time.
+- `minimumLevel` drops a message before the ring and the file (the Debug line never reached the ring).
+- **Main-thread crash** (unhandled exception, `LastChance = Mini`): exit code `0xE0434352`, about 3 s. `Dumps/LastChance/<stem>.<yyyyMMdd_HHmmss_fff>.dmp` (about 1.9 MB) and `.crash.log` beside it, holding the last line before the throw. The `using` still disposed the Monitor on the way out, so the log file had every line and the ring was kept. The next run with the same name wrote `Logs/<stem>.previous-crash.log` from that ring, deleted it, and moved the dead run's log to `Logs/Archives/<name>.<yyMMdd>.0.log`.
+- **Worker-thread crash, no collector:** nothing disposes, so the subprocess saw the host die without a Stop, saved the ring as `Logs/<stem>.<yyyyMMdd_HHmmss>.abnormal-exit.log` and deleted it; the next run had nothing to recover. The log file still had every line here (the process took about 2 s to die).
+- **First chance** (`FirstChance = Triage`): one handled exception gave a 0.4 MB `Dumps/FirstChance/*.dmp` within 0.2 s, written by the runtime's `createdump` (`.dmp.partial`, then renamed; it prints `[createdump] ...` to stdout). Throttled to one per 10 s; leave it `None` in a shipped game.
+- Setup errors (T29): a name with `/`, `*` or `?` throws `ArgumentException`; a missing `LogDirectory` or `DumpPath` throws `DirectoryNotFoundException`; a second `AddLogger` throws `InvalidOperationException`.
+- Not run: Linux and macOS, `Heap`/`Full` dumps, `KeepCount`/`MaxArchives` pruning, `LogFormatter`, a native crash (access violation) or `Environment.FailFast`, a crash during the dump wait, reading a dump in a debugger.
 
 ### 7.26 Numerics quaternion conventions [RUN]
 Same as System.Numerics, checked by `RecipeCheck 7.26`:
@@ -167,7 +178,7 @@ Same as System.Numerics, checked by `RecipeCheck 7.26`:
 | T24 | `Platform` throws `PlatformNotSupportedException` outside Windows/Linux/macOS | — |
 | T26 | `LogCategory.Make` uses an unlocked `Dictionary` | Create categories at startup on one thread |
 | T27 | `NativeList<T>.Count`/`Capacity` are `ElementCount` and print as `ElementCount { Value = 10 }` | `.Value` |
-| T29 | Monitor: `Add*` throw on missing directories; a second `AddLogger` throws; `name` must be a plain file name | Create the directories first |
+| T29 | Monitor: `AddLogger`/`AddCollector` throw `DirectoryNotFoundException` on a missing directory; a second `AddLogger` throws `InvalidOperationException`; a `name` with a path separator or wildcard throws `ArgumentException` [RUN: 7.39] | Create the directories first; call each `Add*` once at startup |
 | T31 | `foreach` over `NativeList<T>` allocates (B8) | Iterate `AsSpan()` |
 
 ## Framework bugs (confirmed in source)

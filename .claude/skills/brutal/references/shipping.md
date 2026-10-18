@@ -15,6 +15,14 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 <ItemGroup><None Include="Assets\NOTICE.txt" Link="NOTICE.txt" CopyToOutputDirectory="PreserveNewest" /></ItemGroup> <!-- licence 2.3 -->
 ```
 - Build with `dotnet publish -c Release -o ../Game-win-x64`. An SDL + Stb game is about 38 MB.
+- Using `Brutal.Monitor`? Keep its watchdog exe out of the bundle (T52) [RUN: a probe publish]:
+  ```xml
+  <Target Name="KeepMonitorSubprocessOutOfBundle" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)" Condition="'%(Filename)' == 'Brutal.Monitor.Subprocess'" ExcludeFromSingleFile="true" />
+    </ItemGroup>
+  </Target>
+  ```
 - Test the output from an empty folder.
 
 ## Licence checklist (BRUTAL License v1.0)
@@ -61,6 +69,7 @@ A distributed product **must**:
 | ID | Trap | Fix |
 |---|---|---|
 | T50 | Two BRUTAL packages can ship a notice with the same file name: `Ahwoo.BRUTAL.ImGui` and `ImGui.Backends` both carry `BRUTAL-IMGUI-THIRD-PARTY-NOTICES.txt` (identical), and two RenderDoc packages share `BRUTAL-RENDERDOC-THIRD-PARTY-NOTICES.txt`. A licence-copy target that links every `LICENSES/*.txt` to `licenses/` builds fine, but `dotnet publish` fails with **NETSDK1152** (multiple publish output files with the same relative path). The templates don't reference ImGui, so this only shows when you add it [RUN: RecipeCheck's publish] | Use the target above: it keys the notices by file name and drops duplicates with `RemoveDuplicates` before linking them |
+| T52 | With the single-file settings above, `IncludeNativeLibrariesForSelfExtract` also bundles `Brutal.Monitor.Subprocess.exe` (it ships as a native asset). `Monitor` looks for it only beside the app or in `runtimes/<rid>/native`, so after publish `SubprocessRunning` is false and **no crash dumps are written**, with no exception [RUN: a probe publish; the subprocess ran in the plain build and not in the single-file exe]. The only notice is an Error on the `Monitor` log category, sent from the constructor, before you can have wired the Monitor's own provider [SRC] | Add the `KeepMonitorSubprocessOutOfBundle` target above: the exe then sits beside the game (2.6 MB) and the subprocess runs. Check `SubprocessRunning` at startup |
 | T41 | Nearly every BRUTAL native DLL imports the Microsoft VC++ runtime: `VCRUNTIME140.dll` (SDL3, SDL_image, SDL_mixer, stb, Box2D, GLFW, GLAD, …), plus `VCRUNTIME140_1.dll` (SDL_ttf, ImGui, Jolt, …) and `MSVCP140.dll` (Jolt, RakNet, ShaderC, VMA, Ktx, Gli, Slang). Windows doesn't include them, and a self-contained .NET publish doesn't bundle them (the .NET runtime links its own CRT statically). Most PCs have them from other software, so the game works for you and fails for a friend with "Unable to load DLL 'SDL3' or one of its dependencies". Found by a skill-free eval run, not by our checks, because every dev machine has the runtime [RUN: import tables read with a PE parser] | Check at start-up and point the player to `vc_redist.x64.exe` (template `Platform/NativeDialog.cs`). Bundling the DLLs beside the exe (app-local deployment) is also possible, but the redistribution right comes from your Visual Studio licence, so decide that yourself. List the requirement in the player README |
 
 ## Making a build players can use

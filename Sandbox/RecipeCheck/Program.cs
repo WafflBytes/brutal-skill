@@ -15,6 +15,10 @@ using Brutal.StbApi;
 using Brutal.VulkanApi;
 using Microsoft.Extensions.Logging;
 
+// Child process for recipe 7.39 (a Monitor crash has to happen in a process of its own).
+if (args is ["--monitor-child", var childMode, var childRoot])
+    return Recipes.MonitorChild(childMode, childRoot);
+
 var noWindow = args.Contains("--no-window");
 var noVulkan = args.Contains("--no-vulkan");
 var filters = args.Where(a => !a.StartsWith("--")).ToArray();
@@ -50,6 +54,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.36", "ImGui on SDL_RenderGeometry (software renderer)", Recipes.ImGuiSdlRenderRecipe),
     ("7.37", "Localization: LString, ResX provider, B6", Recipes.LocalizationRecipe),
     ("7.38", "Texture: Basis KTX2 (T32), DDS, LoadFromMemory", Recipes.TextureRecipe),
+    ("7.39", "Monitor: log file, crash dump, crash tail (T29)", Recipes.MonitorRecipe),
 };
 
 var failed = 0;

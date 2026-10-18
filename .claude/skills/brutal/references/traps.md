@@ -27,7 +27,7 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T26 | `LogCategory.Make` isn't thread-safe | core-libs |
 | T27 | `NativeList<T>.Count` is an `ElementCount`; use `.Value` | core-libs |
 | T28 | Slang: SPIR-V or source text only; no CPU/LLVM targets | vulkan |
-| T29 | Monitor `Add*` throw on missing directories / second logger | core-libs |
+| T29 | Monitor `Add*` throw on missing directories / second logger / bad name | core-libs |
 | T30 | OpenAL Soft is under the GNU Library GPL v2 | audio |
 | T31 | `foreach` over `NativeList<T>` allocates | core-libs |
 | T32 | KTX2/Basis transcodes to BC7 by default | assets |
@@ -43,6 +43,7 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T45 | `Alc.OpenDevice()` throws when there is no active default playback device; `ALSOFT_DRIVERS=null` must be set before the first OpenAL call | audio |
 | T47 | BRUTAL's ImGui `OpenGlBackend` and `VulkanBackend` silently never call `AddCallback` draw callbacks | glfw-imgui |
 | T48 | SDL3 drops gamepad input while windows exist but none is focused (hidden test window, background game); set `HintJoystickAllowBackgroundEvents` | sdl |
+| T52 | A single-file publish bundles `Brutal.Monitor.Subprocess.exe`, so Monitor silently writes no crash dumps; mark it `ExcludeFromSingleFile` | shipping |
 | T51 | A hinge motor's torque is unlimited by default and drives an arm through its limits; cap it with `GetMotorSettings().SetTorqueLimit` | physics |
 | T50 | Two packages ship the same notice file name (ImGui + ImGui.Backends); a naive licence-copy target makes `dotnet publish` fail with NETSDK1152 | shipping |
 | T49 | A hand-written ImGui platform glue must send `ImGuiKey.Mod_Ctrl/Shift/Alt/Super`; left/right modifier keys alone give no shortcuts | glfw-imgui |
