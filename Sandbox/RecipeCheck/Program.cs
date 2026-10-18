@@ -44,6 +44,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.27", "Jolt body tuning + determinism", Recipes.JoltTuningRecipe),
     ("7.28", "RakNet failure paths (full, failed, leave, crash)", Recipes.RakNetFailuresRecipe),
     ("7.32", "OpenAL device, buffer, source state machine", Recipes.OpenAlRecipe),
+    ("7.34", "Jolt constraints, compounds, characters", Recipes.JoltAdvancedRecipe),
 };
 
 var failed = 0;

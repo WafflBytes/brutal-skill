@@ -98,6 +98,47 @@ bodies.SetPositionRotationAndVelocity(ball, start, floatQuat.Identity, float3.Ze
 - One `Factory`/`RegisterTypes`, one job system and one temp allocator can serve several `PhysicsSystem`s in one process, one after another.
 - Pickups and triggers without the (unexported) contact listener: check distances in `Sim/` each step (coin within ball radius + coin radius). Ground checks: compare against your own level data. Jolt's ray casts are unexported (export gaps).
 
+### 7.34 Jolt constraints, compound shapes and character controllers [RUN]
+Checked by `RecipeCheck 7.34` (`Sandbox/RecipeCheck/Recipes.JoltAdvanced.cs`, a small `JoltScene` helper plus one check per feature). Same world setup as 7.6.
+```csharp
+// Constraints: settings -> BodyInterface.CreateConstraint(settings, bodyId1, bodyId2) -> physics.AddConstraint
+using var hs = HingeConstraintSettings.Create();
+hs.SetSpace(ConstraintSpace.WorldSpace);                     // then every point and axis below is in world space
+hs.SetPoint1(pivot); hs.SetPoint2(pivot);
+hs.SetHingeAxis1(new float3(0, 0, 1)); hs.SetHingeAxis2(new float3(0, 0, 1));
+hs.SetNormalAxis1(new float3(1, 0, 0)); hs.SetNormalAxis2(new float3(1, 0, 0));
+var c = bodies.CreateConstraint(hs, anchorId, bobId);        // TwoBodyConstraint; carries ONE reference of its own
+physics.AddConstraint(c);                                    // the system takes another
+var hinge = Unsafe.BitCast<TwoBodyConstraint, HingeConstraint>(c);   // the AsHingeConstraint() cast is unexported (T46); same handle layout
+hinge.SetMotorState(MotorState.Velocity); hinge.SetTargetAngularVelocity(2f);   // motor: 2 rad/s measured exactly
+float angle = hinge.GetCurrentAngle();
+physics.RemoveConstraint(c); c.Dispose();                    // reference counts 1 -> 2 -> 1 -> 0 [RUN]: Dispose yours once
+```
+- **Which settings work** (create, simulate, limits held): `HingeConstraintSettings` (motor through the constraint's `SetMotorState`; its `SetLimitsMin/Max` exist but weren't run), `PointConstraintSettings` (`SetPoint1/2`), `DistanceConstraintSettings` (`SetMinDistance/SetMaxDistance`: a rope), `FixedConstraintSettings` (`SetAutoDetectPoint(true)`), `SliderConstraintSettings` (`SetSliderAxis`, `SetLimitsMin/Max`, `SetAutoDetectPoint(true)`), `ConeConstraintSettings` (`SetTwistAxis1/2`, `SetHalfConeAngle`), `SwingTwistConstraintSettings` (`SetNormalHalfConeAngle`, `SetPlaneHalfConeAngle`, `SetTwistMin/MaxAngle`). Measured: a hinge, point or distance joint keeps its arm length within 5 mm; a 30 degree cone or swing-twist limit holds a hard swing to about 32 degrees (soft constraints give a few degrees); the slider stops on its limit and gravity can't push it off the axis. Gear, pulley, rack-and-pinion, path, six-DOF and vehicle constraints weren't run.
+- **Create constraints from body IDs.** `settings.Create(Body, Body)` needs `Body` pointers, and the body locks that would give you one are unexported (T46).
+- **`RemoveConstraint` doesn't wake bodies.** A body that had fallen asleep on its constraint (about a second of stillness) stays where it hangs after removal until you call `bodies.ActivateBody(id)` [RUN].
+- **Don't put the bodies on top of each other.** A static anchor box overlapping the dynamic wheel made a hinge motor reach 0.8 rad where 2.0 was commanded (the contact fought the motor); with the anchor moved away it was exact. Constraint points needn't sit on a body.
+- **Compound shapes:** `StaticCompoundShapeSettings.Create()` / `MutableCompoundShapeSettings.Create()`, then `AddShape(offset, rotation, childSettings)` per child and `CreateShape()`. A two-sphere dumbbell dropped from 3 m rested flat with both spheres on the floor for both kinds (y 0.48).
+```csharp
+// CharacterVirtual: a capsule you move yourself; Jolt handles collision, slopes, steps and ground state
+using var capsuleSettings = CapsuleShapeSettings.Create(0.5f, 0.3f);      // (half height of the cylinder part, radius)
+using var shape = capsuleSettings.CreateShape();
+using var cs = CharacterVirtualSettings.Create();
+cs.SetShape(shape); cs.SetUp(new float3(0, 1, 0)); cs.SetMaxSlopeAngle(MathF.PI * 50 / 180);
+var ch = CharacterVirtual.Create(cs, startPos, floatQuat.Identity, physics);
+var bpf = BroadPhaseLayerFilter.Create(); var olf = ObjectLayerFilter.Create(); var bf = BodyFilter.Create(); var sf = ShapeFilter.Create(); // allow-all
+// every fixed step:
+var onGround = ch.GetGroundState() == CharacterBase.GroundState.OnGround;
+ch.SetLinearVelocity(new float3(vx, onGround ? (jump ? 6f : 0f) : ch.GetLinearVelocity().Y - 9.81f / 60, 0)); // YOU apply gravity and jumps
+ch.ExtendedUpdate(1 / 60f, gravity, in stairs, bpf, olf, bf, sf, temp);   // or ch.Update(...) without stairs / stick-to-floor
+// ch.GetPosition(), GetGroundState(), GetGroundNormal(), GetGroundVelocity(); dispose filters and ch before the physics system
+```
+- **`stairs`** is `new CharacterVirtual.ExtendedUpdateSettings { StickToFloorStepDown = (0, -0.5, 0), WalkStairsStepUp = (0, 0.4, 0), WalkStairsMinStepForward = 0.02f, WalkStairsStepForwardTest = 0.15f, WalkStairsCosAngleForwardContact = cos(75 deg), WalkStairsStepDownExtra = float3.Zero }` (Jolt's C++ defaults). Measured: `Update` alone is stopped by a 0.3 m step; `ExtendedUpdate` climbs it (top of the step at y 1.10 for a capsule whose centre rests at 0.80) and walks on.
+- **Measured behaviour:** the capsule falls and stands (`OnGround`, y 0.80); `SetLinearVelocity(3, ...)` moves exactly 3 m in 1 s; a wall stops it 0.02 m short of the capsule radius (x 4.68 for a wall face at 5.0); a 6 m/s jump peaks at 2.69 (analytic 2.63) and lands back on the ground.
+- **Filters:** `PhysicsSystem.GetDefaultBroadPhaseLayerFilter` / `GetDefaultLayerFilter` are unexported, but `BroadPhaseLayerFilter.Create()`, `ObjectLayerFilter.Create()`, `BodyFilter.Create()` and `ShapeFilter.Create()` give allow-everything filters that work.
+- **`Character`** (the body-based controller) also works: `CharacterSettings.Create()` (`SetShape`, `SetLayer`, `SetUp`, `SetMass`, `SetFriction`), `Character.Create(settings, pos, rot, userData, physics)`, `AddToPhysicsSystem(Activation.Activate)`, call `PostSimulation(0.05f)` after every `physics.Update`, `SetLinearVelocity`, `GetGroundState()`, `RemoveFromPhysicsSystem()`, `Dispose()`. It stood on the floor (y 0.79) and moved when pushed. Prefer `CharacterVirtual` for player movement; use `Character` when the character should be an ordinary body that other bodies push.
+- **No contact callbacks:** `ManagedCharacterContactListener` can't be constructed (its native proxy is unexported), so `CharacterVirtual` has no `OnContactAdded` / `OnContactSolve` (no custom push-back, no moving-platform hooks); the recipe fails the day that changes.
+
 ### 7.22 Box2D contact, hit and sensor events [RUN]
 Every event flag is **off by default** in `B2ShapeDef.Default`, including on sensors (T42). Opt in per shape:
 ```csharp
@@ -126,6 +167,7 @@ var s = world.GetSensorEvents();           // BeginEvents/EndEvents with SensorS
 | T25 | Jolt is "highly experimental"; its API changes between versions | Pin the version and re-run ExportAudit after upgrading |
 | T42 | **Every Box2D event flag defaults to off** in this build: `B2ShapeDef.Default` has `EnableContactEvents`, `EnableHitEvents` and `EnableSensorEvents` all false. Box2D v3.0 defaulted contact events to on, so code written for it silently gets no events. Sensor events need the flag on **both** the sensor and the visitor shape [RUN] | Set the flags in every shape def that should report. `RecipeCheck 7.22` fails if the defaults change |
 | T36 | **Mesh, convex-hull and height-field shapes can't be created in Jolt 2026.10.2.** `MeshShapeSettings.Create(triangles, materials)`, `ConvexHullShapeSettings.Create(points)` and `HeightFieldShapeSettings.Create(samples, …)` resolve and run, but the data never reaches Jolt, so `CreateShape()` throws `JoltException` ("Need triangles to create a mesh shape!", "Need at least 3 points to make a hull", "HeightFieldShape: Sample count too low!" even with 64×64 samples). Every other route is unexported: `Create()`, `MeshShapeSettings.Create(vertices, indexedTriangles)`, `SetTriangleVertices`, `SetIndexedTriangles`, `SetPoints`, `SetHeightSamples`. Same geometry works in upstream Jolt 5.6.0. Reported as [ahwootech/BRUTAL#13](https://github.com/ahwootech/BRUTAL/issues/13); RocketWerkz says it's fixed internally (2026-10-15), not yet released [RUN] | Build level collision from primitives: `StaticCompoundShapeSettings.Create()` + `AddShape(position, rotation, boxSettings)` per piece, then `CreateShape()` [RUN: a ball rests on it]. For terrain, approximate with boxes; for dynamic convex objects, use box/sphere/capsule or a compound of them. On upgrade, `RecipeCheck` check `T36` fails as soon as the bug is fixed |
+| T46 | **Jolt constraints and characters work, but their supporting calls are unexported (2026.10.2).** Missing: the casts `Constraint.AsHingeConstraint` and the other `Constraint.AsXxx()` (and `ConstraintSettings.AsSwingTwistConstraintSettings`); `MotorSettings.GetSpringSettings`, so every `Hinge/Slider/SixDOF/SwingTwist...ConstraintSettings.Get/SetMotorSettings` and `GetLimitsSpringSettings`; the body locks `BodyLockRead/Write.Create/GetBody` (so no `Body` pointer from an ID, and `settings.Create(Body, Body)` is unusable); `PhysicsSystem.AddConstraints/RemoveConstraints/GetConstraints`, `GetDefaultBroadPhaseLayerFilter`, `GetDefaultLayerFilter`; every `CharacterContactListener` proxy (`new ManagedCharacterContactListener` throws `EntryPointNotFoundException`, so no contact callbacks or push-back control); on characters `GetActiveContacts`, `CheckCollision*`, `GetTransformedShape`, `CharacterVsCharacterCollision`, `Get/SetSupportingVolume`. Found by `ExportAudit` and run in 7.34 [RUN] | Create constraints with `BodyInterface.CreateConstraint(settings, id1, id2)`; reach `HingeConstraint` calls with `Unsafe.BitCast<TwoBodyConstraint, HingeConstraint>(c)`; set motors through the constraint (`SetMotorState`, `SetTargetAngularVelocity`); use `XxxFilter.Create()` for allow-all filters; wake bodies after `RemoveConstraint` with `ActivateBody`; do contact reactions in `Sim/` by distance checks. Vehicles, ragdolls, soft bodies and the path, gear, pulley, rack-and-pinion and six-DOF constraints weren't run |
 
 ## Export gaps
 
@@ -140,4 +182,4 @@ Box2D: 64 inline maths helpers are missing (`b2Add`, `b2Dot`, `b2Normalize`, `b2
 - **`BodyInterface`:** `AddForces`, `AddImpulses`, `MoveKinematics`, `SetPositionsAndRotations*`, `SetLinearAndAngularVelocities`, `PrepareAddBodies`, `GetTransformedShape`.
 - **`PhysicsSystem`:** `GetBodies`, `GetActiveBodies`, `GetBodyStats`, `GetBounds`, `AddConstraints`, `RemoveConstraints`, `SaveState`, `RestoreState`, `GetPhysicsSettings`, `GetMax*Limit`, `SetCombineFriction`, `SetCombineRestitution`.
 - **Advertised helpers, all unusable in 2026.10.2:** `ContactEventListener`, `BodyAddBatch`, `SetTraceHandler`, `SetAssertHandler`, the `*ToIDMap` helpers.
-- **Partially missing:** `CharacterVirtual`, `NarrowPhaseQuery`, `BroadPhaseQuery`, `SoftBody*`, `Ragdoll*`, `Vehicle*`, `Constraint`. Run the audit for the exact list.
+- **Partially missing:** `CharacterVirtual`, `NarrowPhaseQuery`, `BroadPhaseQuery`, `SoftBody*`, `Ragdoll*`, `Vehicle*`, `Constraint`. Run the audit for the exact list. Constraints, `CharacterVirtual` and `Character` still work through their exported subset: see 7.34 and T46.

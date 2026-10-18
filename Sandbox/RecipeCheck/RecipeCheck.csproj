@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Runs skill recipes 7.1-7.8, 7.10 (Stb round trip), 7.11, 7.18-7.20 (SDL satellites) and 7.21 (ImGui) and 7.32 (OpenAL). Exit code = number of failed recipes. -->
+  <!-- Runs skill recipes 7.1-7.8, 7.10 (Stb round trip), 7.11, 7.18-7.20 (SDL satellites) and 7.21 (ImGui), 7.32 (OpenAL) and 7.34 (Jolt constraints, compounds, characters). Exit code = number of failed recipes. -->
   <ItemGroup>
     <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
     <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.2" />
