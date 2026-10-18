@@ -40,6 +40,7 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T39 | No font ships with Sdl.Ttf; bundle a redistributable one | sdl |
 | T40 | `SdlMixer.PlayTrack` resets the loop count; set loops after it | sdl |
 | T44 | RakNet only notices a vanished peer when a reliable message can't be delivered; set the same `SetTimeoutTime` on both ends | misc |
+| T45 | `Alc.OpenDevice()` throws when there is no active default playback device; `ALSOFT_DRIVERS=null` must be set before the first OpenAL call | audio |
 | T43 | `floatQuat.CreateFromRotationMatrix` silently returns a non-unit quaternion for a mirrored (left-handed) basis | core-libs |
 | T42 | Box2D contact, hit and sensor events are all off by default; sensors need the flag on both shapes | physics |
 | T41 | Nearly every BRUTAL native DLL needs the VC++ runtime, which Windows doesn't include | shipping |

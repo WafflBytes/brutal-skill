@@ -43,6 +43,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.26", "Numerics quaternion conventions", Recipes.QuaternionRecipe),
     ("7.27", "Jolt body tuning + determinism", Recipes.JoltTuningRecipe),
     ("7.28", "RakNet failure paths (full, failed, leave, crash)", Recipes.RakNetFailuresRecipe),
+    ("7.32", "OpenAL device, buffer, source state machine", Recipes.OpenAlRecipe),
 };
 
 var failed = 0;
