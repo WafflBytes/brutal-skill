@@ -47,6 +47,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.34", "Jolt constraints, compounds, characters", Recipes.JoltAdvancedRecipe),
     ("7.35", "ImGui on SDL + OpenGL (hand-written glue)", noWindow ? () => throw new SkipException("--no-window") : Recipes.ImGuiSdlRecipe),
     ("7.36", "ImGui on SDL_RenderGeometry (software renderer)", Recipes.ImGuiSdlRenderRecipe),
+    ("7.37", "Localization: LString, ResX provider, B6", Recipes.LocalizationRecipe),
 };
 
 var failed = 0;

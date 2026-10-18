@@ -124,6 +124,23 @@ for (var s = 0; s < data.Length; s += 10_000)
 scheduler.ExecuteJobs(); scheduler.Wait();                      // parallel-for = chunk by hand
 ```
 
+### 7.37 Localization [RUN]
+Checked by `RecipeCheck 7.37` (headless). `{Name}` variables; a translation may reorder them, and arguments still follow the template's order.
+```csharp
+using Brutal.Localization; using Brutal.Localization.ResX;
+var strings = new LocalizedStrings();               // or the static LStrings singleton
+var coins = strings.Create("hud.coins", "{Name} has {Count} coins");
+coins.Format("Ann", 3);                             // "Ann has 3 coins"
+using (var r = new ResXReader("fr.resx"))           // ResXWriter.AddString(name, value, comment) writes one
+    fr = r.Data.ToDictionary(kv => kv.Key, kv => kv.Value.Value);
+strings.SetLocalizedStringProvider((LString s, [NotNullWhen(true)] out string? t) => fr.TryGetValue(s.Id.ToString(), out t));
+coins.Format("Ann", 3);                             // fr "{Count} pieces pour {Name}" -> "3 pieces pour Ann"
+```
+- Setting the provider re-localizes every existing `LString`; one whose id the provider lacks keeps its template. `RemoveLocalizedStringProvider()` returns all to templates.
+- `Localize` with an unknown variable name, and `Format` with the wrong argument count, throw `ArgumentException`.
+- `Format(writer, ...)` into a `RingBufferWriter<char>`: the writer is copied (B6), so a second call overwrites the first result. Format to `string`, or pass a class writer (the recipe's `ArrayCharWriter`), which advances.
+- Not run: the `LStrings` singleton, ResX files on disk, more than two variables, thread safety.
+
 ### Monitor (crash dumps, ring logger)
 
 **Monitor** [DOC]. The directories must already exist; call each `Add*` once.
@@ -162,6 +179,6 @@ Same as System.Numerics, checked by `RecipeCheck 7.26`:
 | B3 | same file `:138-142` | Explicit `INativeList.Capacity` gets/sets the size | Use the class `Capacity` |
 | B4 | `Brutal.Maths/RandomExtensions.cs:160-212` | `Next*Unit3` clusters at the poles (**measured 28.8% vs 10%** for abs(z) > 0.9); `PointInSphere` uses sqrt instead of a cube root; `NextDoubleUnit2` uses `float.Tau` | `z = 2u-1, r = √(1-z²), θ = 2πv`; radius `R·∛w` |
 | B5 | `Brutal.Concurrency/Jobs/JobRunner.cs:212-218, 281-323` | An exception in `IJob.Run` **kills the process** (try/finally, no catch); `Wait()` busy-spins; thread priority set at `:289` is never restored | Catch inside `Run()`; use `Parallel.For`/`Task` for long work |
-| B6 | `Brutal.Localization/LString.Format.gen.cs:52`, `Buffers/RingBufferWriter.cs:17` | `Format<TWriter>` takes a `ref struct` writer **by value**, so the caller's writer never advances | Use the `string`-returning overloads or a class writer |
+| B6 | `Brutal.Localization/LString.Format.gen.cs:52`, `Buffers/RingBufferWriter.cs:17` | `Format<TWriter>` takes a `ref struct` writer **by value**, so the caller's writer never advances: a second `Format` into the same `RingBufferWriter` overwrites the first [RUN: 7.37 asserts it] | Use the `string`-returning overloads or a class writer |
 | B8 | `Brutal.Collections/NativeList/NativeListOfT.cs:126-130` | `GetEnumerator` allocates via `yield`; the struct enumerator is unused | Iterate `AsSpan()` |
 | B9 | `brutal-conventions.md` vs `Brutal.Memory/Mem.cs` | The doc claims `Mem` tracks memory; it doesn't | Add your own debug counters |
