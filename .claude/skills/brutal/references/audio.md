@@ -38,7 +38,7 @@ Context.MakeCurrent(null);                    // release before the context is d
 - **Pool sources for effects:** `Stop()`, assign a different `Buffer`, `Play()` again [RUN]. A buffer can't be deleted while a source still has it.
 - **Errors never throw** except for device/context lifetime calls: using a deleted source sets `AlError.InvalidName`; `Al.GetError()` returns it and clears it [RUN].
 - **Fall back to silence** when `OpenDevice` throws: a game must still run on machines with no audio output (the eval's baseline 3D game wrapped the whole audio class in try/catch).
-- **Licence (T30):** `OpenAL32.dll` lands beside the exe (dynamic linking, as required); the package ships `LICENSES/` (COPYING, BSD-3, pffft, fmt, gsl and `BRUTAL-OPENAL-THIRD-PARTY-NOTICES.txt`), which the licence-copy target in `shipping.md` copies to `licenses/` [SRC for OpenAL specifically]. Mention OpenAL Soft in the player README credits.
+- **Licence (T30):** `OpenAL32.dll` lands beside the exe (dynamic linking, as required); the package ships `LICENSES/` (COPYING, BSD-3, pffft, fmt, gsl and `BRUTAL-OPENAL-THIRD-PARTY-NOTICES.txt`), which the licence-copy target in `shipping.md` copies to `licenses/` [RUN: RecipeCheck T30 checks the files and the GNU Library GPL v2 heading, built and published]. Mention OpenAL Soft in the player README credits.
 
 ## Traps
 

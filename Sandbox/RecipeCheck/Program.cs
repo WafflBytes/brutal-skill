@@ -44,6 +44,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.27", "Jolt body tuning + determinism", Recipes.JoltTuningRecipe),
     ("7.28", "RakNet failure paths (full, failed, leave, crash)", Recipes.RakNetFailuresRecipe),
     ("7.32", "OpenAL device, buffer, source state machine", Recipes.OpenAlRecipe),
+    ("T30", "OpenAL Soft beside the exe + its LGPL v2 licences copied", Recipes.OpenAlLicenceTrap),
     ("7.34", "Jolt constraints, compounds, characters", Recipes.JoltAdvancedRecipe),
     ("7.35", "ImGui on SDL + OpenGL (hand-written glue)", noWindow ? () => throw new SkipException("--no-window") : Recipes.ImGuiSdlRecipe),
     ("7.36", "ImGui on SDL_RenderGeometry (software renderer)", Recipes.ImGuiSdlRenderRecipe),

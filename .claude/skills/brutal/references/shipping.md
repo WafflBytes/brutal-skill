@@ -25,13 +25,20 @@ A distributed product **must**:
    - Files: `BRUTAL/docs/branding/LOGO_BRUTAL_WHT.png` / `_BLK.png`; official assets at ahwoo.com/brutal-branding.
    - A 2.5 s fade, skippable after 1 s, is fine.
 3. Ship `NOTICE.txt` beside it (2.3); copy `BRUTAL/NOTICE.txt`.
-4. Keep each shipped package's `LICENSES/` notices; watch OpenAL (T30) and FMOD (T21). Most native packages (Sdl, Sdl.Ttf, Sdl.Mixer, Stb, …) carry `LICENSES/BRUTAL-*-THIRD-PARTY-NOTICES.txt`, but **nothing copies them to your output by default**. This target [RUN] copies them for every referenced `Ahwoo.BRUTAL.*` package into `licenses/`, for both build and publish:
+4. Keep each shipped package's `LICENSES/` notices; watch OpenAL (T30) and FMOD (T21). Most native packages (Sdl, Sdl.Ttf, Sdl.Mixer, Stb, …) carry `LICENSES/BRUTAL-*-THIRD-PARTY-NOTICES.txt`, but **nothing copies them to your output by default**. This target [RUN] copies them for every referenced `Ahwoo.BRUTAL.*` package into `licenses/`, for both build and publish, one copy per file name (T50):
    ```xml
    <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">
      <ItemGroup>
        <_BrutalPackage Include="@(PackageReference)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('Ahwoo.BRUTAL.'))" />
        <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/%(_BrutalPackage.Version)/LICENSES/*.txt" />
-       <None Include="@(_BrutalNotice)" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+       <!-- Some packages ship the same notice (ImGui and ImGui.Backends): copy each name once, or publish fails (NETSDK1152, T50). -->
+       <_BrutalNoticeName Include="@(_BrutalNotice->'%(Filename)%(Extension)')" Source="%(_BrutalNotice.FullPath)" />
+     </ItemGroup>
+     <RemoveDuplicates Inputs="@(_BrutalNoticeName)">
+       <Output TaskParameter="Filtered" ItemName="_BrutalNoticeOnce" />
+     </RemoveDuplicates>
+     <ItemGroup>
+       <None Include="@(_BrutalNoticeOnce->'%(Source)')" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
      </ItemGroup>
    </Target>
    ```
@@ -53,6 +60,7 @@ A distributed product **must**:
 
 | ID | Trap | Fix |
 |---|---|---|
+| T50 | Two BRUTAL packages can ship a notice with the same file name: `Ahwoo.BRUTAL.ImGui` and `ImGui.Backends` both carry `BRUTAL-IMGUI-THIRD-PARTY-NOTICES.txt` (identical), and two RenderDoc packages share `BRUTAL-RENDERDOC-THIRD-PARTY-NOTICES.txt`. A licence-copy target that links every `LICENSES/*.txt` to `licenses/` builds fine, but `dotnet publish` fails with **NETSDK1152** (multiple publish output files with the same relative path). The templates don't reference ImGui, so this only shows when you add it [RUN: RecipeCheck's publish] | Use the target above: it keys the notices by file name and drops duplicates with `RemoveDuplicates` before linking them |
 | T41 | Nearly every BRUTAL native DLL imports the Microsoft VC++ runtime: `VCRUNTIME140.dll` (SDL3, SDL_image, SDL_mixer, stb, Box2D, GLFW, GLAD, …), plus `VCRUNTIME140_1.dll` (SDL_ttf, ImGui, Jolt, …) and `MSVCP140.dll` (Jolt, RakNet, ShaderC, VMA, Ktx, Gli, Slang). Windows doesn't include them, and a self-contained .NET publish doesn't bundle them (the .NET runtime links its own CRT statically). Most PCs have them from other software, so the game works for you and fails for a friend with "Unable to load DLL 'SDL3' or one of its dependencies". Found by a skill-free eval run, not by our checks, because every dev machine has the runtime [RUN: import tables read with a PE parser] | Check at start-up and point the player to `vc_redist.x64.exe` (template `Platform/NativeDialog.cs`). Bundling the DLLs beside the exe (app-local deployment) is also possible, but the redistribution right comes from your Visual Studio licence, so decide that yourself. List the requirement in the player README |
 
 ## Making a build players can use

@@ -111,4 +111,27 @@ static partial class Recipes
             Context.MakeCurrent(null); // release before the context is disposed
         }
     }
+
+    // T30: OpenAL Soft is under the GNU Library GPL v2. It must stay a separate library beside the exe, and its
+    // LICENSES/ must ship. Nothing copies them by default; this project uses the target from shipping.md.
+    public static void OpenAlLicenceTrap()
+    {
+        var dir = AppContext.BaseDirectory;
+        var native = Directory.GetFiles(dir).Select(Path.GetFileName)
+            .Where(f => f == "OpenAL32.dll" || f!.StartsWith("libopenal.")).ToArray();
+        Console.WriteLine($"     native: {string.Join(", ", native)}");
+        Check(native.Length > 0, "OpenAL Soft is a separate native library beside the exe (dynamic linking)");
+
+        var licences = Path.Combine(dir, "licenses");
+        Check(Directory.Exists(licences), "licenses/ exists (the IncludeBrutalThirdPartyNotices target ran)");
+        string[] expected = ["BRUTAL-OPENAL-THIRD-PARTY-NOTICES.txt", "openal-soft-COPYING.txt", "openal-soft-BSD-3Clause.txt",
+            "openal-soft-LICENSE-pffft.txt", "openal-soft-fmt-LICENSE.txt", "openal-soft-gsl-LICENSE.txt"];
+        var missing = expected.Where(f => !File.Exists(Path.Combine(licences, f))).ToArray();
+        Check(missing.Length == 0, $"all OpenAL licence files copied (missing: {string.Join(", ", missing)})");
+
+        var copying = File.ReadLines(Path.Combine(licences, "openal-soft-COPYING.txt")).Take(3).Select(l => l.Trim()).ToArray();
+        Console.WriteLine($"     COPYING: {copying[0]} / {copying[1]}");
+        Check(copying[0] == "GNU LIBRARY GENERAL PUBLIC LICENSE" && copying[1].StartsWith("Version 2,"),
+            "OpenAL Soft's licence is the GNU Library GPL v2 (not LGPL 2.1)");
+    }
 }
