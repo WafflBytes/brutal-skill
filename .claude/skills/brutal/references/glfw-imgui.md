@@ -2,7 +2,7 @@
 
 Read this for GLFW windows and input, Dear ImGui / ImPlot debug UI, or RenderDoc capture. BRUTAL ships only a GLFW platform backend for ImGui (T22); SDL games use a small hand-written glue (7.35, and 7.36 for the SDL renderer).
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Packages
 

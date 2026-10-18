@@ -2,7 +2,7 @@
 
 Read this when choosing or wiring up audio. The simplest verified path is an SDL push-mode audio stream (`sdl.md`, 7.16).
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Packages
 

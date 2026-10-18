@@ -39,7 +39,7 @@ Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
 `check-template.ps1` (also run by `verify.ps1`) runs `dotnet new brutal-sdl` in a throwaway template hive (nothing is installed for you), then builds with warnings as errors, runs `--selftest`, `--snapshot` and `--smoke`, publishes a single-file exe, and runs it from an empty folder. Add `-Keep` to inspect the generated project.
 
-`lint-skill.ps1` (also run by `verify.ps1`) checks the skill itself: one full entry per trap/bug ID, an index row in `SKILL.md` naming the right file, every reference file linked, and the "next free IDs" note.
+`lint-skill.ps1` (also run by `verify.ps1`) checks the skill itself: one full entry per trap/bug ID, an index row in `references/traps.md` naming the right file, every reference file linked, the "next free IDs" note in `traps.md`, the export-gap list present, and a size budget for `SKILL.md`.
 
 ## After upgrading BRUTAL packages
 
@@ -47,8 +47,8 @@ Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
 1. `git -C BRUTAL pull`, then `git -C BRUTAL log --stat <verified commit>..HEAD` to see which packages' source changed (the verified commit is in the `SKILL.md` "Verified against" line). `dotnet package search Ahwoo.BRUTAL --take 100` lists the latest package versions.
 2. Bump `ExportAudit/ExportAudit.csproj` (all 50 `PackageDownload` items) and the `PackageReference`s in the other tools.
-3. Run `verify.ps1`, then compare ExportAudit's numbers with `references/export-gaps.md`. Jolt changes most often (T25).
-4. Update the "Verified against" line in `SKILL.md` (package versions and the `BRUTAL/` commit) and the verification log in `references/verification.md`. Until you do, `lint-skill.ps1` fails with a reminder that `BRUTAL/` has moved past the verified commit.
+3. Run `verify.ps1`, then compare ExportAudit's numbers with `references/export-gaps.md` and regenerate `references/export-gaps-detail.txt` (`references/maintaining.md`). Jolt changes most often (T25).
+4. Update the "Verified against" line in `SKILL.md` (package versions and the `BRUTAL/` commit) and add a line to `VERIFICATION-LOG.md`. Until you do, `lint-skill.ps1` fails with a reminder that `BRUTAL/` has moved past the verified commit.
 
 ## Notes
 

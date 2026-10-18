@@ -2,7 +2,7 @@
 
 Read this for loading images (Stb), compressed textures (KTX/Basis, DDS), glTF models, mesh optimisation, or embedding and copying asset files.
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Packages
 

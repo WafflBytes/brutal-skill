@@ -2,7 +2,7 @@
 
 Read this for OpenGL rendering: context setup, GLAD loading, MSAA, FBO post-processing, screenshots, matrices.
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Package
 

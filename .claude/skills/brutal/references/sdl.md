@@ -2,7 +2,7 @@
 
 Read this for SDL windows, the 2D renderer, input (keyboard, mouse, gamepad), SDL audio streams, screenshots, or the SDL satellite libraries. For OpenGL inside an SDL window also read `opengl.md`.
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Packages
 

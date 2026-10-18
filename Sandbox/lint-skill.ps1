@@ -4,7 +4,8 @@
 # - every ID whose entry is in a reference file has exactly one row in references/traps.md, naming that file
 # - every references/*.md named in SKILL.md exists, and every reference file is named in SKILL.md
 # - no leftover section signs from the old single-file guide, no control characters; SKILL.md stays small
-# - the "next free IDs" note in SKILL.md matches the highest IDs in use
+# - the "next free IDs" note in references/traps.md matches the highest IDs in use
+# - references/export-gaps-detail.txt (the search-only export-gap list) exists and has missing: lines
 # - BRUTAL/ (when it is a git clone) at a different commit than SKILL.md's "Verified against" line is a warning, not a failure
 
 $ErrorActionPreference = 'Stop'
@@ -18,6 +19,7 @@ $refFiles = Get-ChildItem $refDir -Filter *.md
 $fileKeys = $refFiles | ForEach-Object { $_.BaseName }
 $indexFile = 'traps'   # references/traps.md holds the one-line index
 $skillLines = Get-Content $skillMd -Encoding UTF8
+$trapsLines = Get-Content (Join-Path $refDir "$indexFile.md") -Encoding UTF8
 
 $entries = @{}   # id -> list of places holding a full entry
 $index = @{}     # id -> list of files named by index rows
@@ -66,8 +68,13 @@ foreach ($prefix in 'T', 'B') {
     # T-IDs skip none today; report gaps so a deleted entry doesn't go unnoticed.
     if ($missing.Count -gt 0) { $problems.Add("$prefix IDs missing from the sequence: $($missing -join ', ')") }
     $next = "$prefix$($max + 1)"
-    if (-not ($skillLines -match "next free IDs:.*\b$next\b")) { $problems.Add("SKILL.md 'next free IDs' should say $next") }
+    if (-not ($trapsLines -match "next free IDs:.*\b$next\b")) { $problems.Add("references/traps.md 'next free IDs' should say $next") }
 }
+
+# Export-gap list (searched by agents instead of running ExportAudit).
+$gapList = Join-Path $refDir 'export-gaps-detail.txt'
+if (-not (Test-Path $gapList)) { $problems.Add("references/export-gaps-detail.txt is missing; regenerate it (references/maintaining.md)") }
+elseif (-not (Select-String -Path $gapList -Pattern '^missing: ' -Quiet)) { $problems.Add("references/export-gaps-detail.txt has no 'missing:' lines") }
 
 # File references.
 $skillText = $skillLines -join "`n"
@@ -99,7 +106,7 @@ foreach ($p in $all) {
     }
 }
 $size = ([IO.File]::ReadAllText($skillMd) -replace "`r", '').Length   # CRLF checkouts must not count extra
-if ($size -gt 20000) { $problems.Add("SKILL.md is $size bytes; keep it under 20000 and move detail into a reference file") }
+if ($size -gt 17500) { $problems.Add("SKILL.md is $size bytes; keep it under 17500 (it loads on every trigger) and move detail into a reference file") }
 
 $refCount = @($refFiles).Count
 $warnings | ForEach-Object { Write-Host "Skill lint WARNING: $_" }

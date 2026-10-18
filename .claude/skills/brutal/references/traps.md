@@ -2,7 +2,33 @@
 
 One line per known trap (`T#`) and confirmed framework bug (`B#`). The full entry, with its fix, is in the reference file named in the last column. Traps that apply to every library (T8, T10, T12, T13, T14, T16, T17) are in full in `SKILL.md`.
 
-Scan this before calling an API you haven't used yet. New IDs: add the full entry to the library's reference file and a row here, then update "next free IDs" in `SKILL.md` and run `Sandbox/lint-skill.ps1`.
+Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T53, B11).
+
+## By symptom
+
+| Symptom | Look at |
+|---|---|
+| `EntryPointNotFoundException` | T6, T36, T46; search `export-gaps-detail.txt` for the entry point |
+| "Unable to load DLL ... or one of its dependencies", often only on another PC | T41 (VC++ runtime), T5 (Vulkan loader), T9 (GLFW), T21 (FMOD) |
+| BRUTALCORE0009/0010 build error, 0011 warning | T13, T14 |
+| A type or member from a README or from memory doesn't exist | T7, T8, T11, T12, T27; then the lookup protocol in `SKILL.md` |
+| A call "succeeds" (null, false, no exception) but nothing happens | T1, T10, T38, T42, T47, T48, T52 |
+| `VkResultError`, or Vulkan structs that look ignored | T4, T2, T3 |
+| Game or scripted test runs 2-3x too fast | T33 |
+| About 6 FPS over Remote Desktop | T15 |
+| Crash, `AccessViolationException` or corruption, often at shutdown | T17, T18, T16, B1 |
+| Jolt shape creation throws `JoltException` | T36 |
+| A Jolt motor drives a body through its limits | T51 |
+| No sound, or OpenAL throws when opening the device | T45, T40, T38 |
+| An image or texture loads in one format but not another | T37, T32, B10 |
+| `dotnet publish` fails with NETSDK1152 | T50 |
+| The published exe writes no crash dumps | T52 |
+| The process dies from an exception in a job | B5 |
+| ImGui shortcuts or draw callbacks don't work | T49, T47 |
+| Numerics results differ from System.Numerics, or a quaternion is wrong | T19, T43 |
+| Unexpected allocations in a hot loop | T31, B8 |
+
+## All IDs
 
 | ID | Summary | File |
 |---|---|---|
@@ -39,18 +65,18 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T38 | `SdlMixer.Generate` returns real-audio bytes, not bytes written | sdl |
 | T39 | No font ships with Sdl.Ttf; bundle a redistributable one | sdl |
 | T40 | `SdlMixer.PlayTrack` resets the loop count; set loops after it | sdl |
+| T41 | Nearly every BRUTAL native DLL needs the VC++ runtime, which Windows doesn't include | shipping |
+| T42 | Box2D contact, hit and sensor events are all off by default; sensors need the flag on both shapes | physics |
+| T43 | `floatQuat.CreateFromRotationMatrix` silently returns a non-unit quaternion for a mirrored (left-handed) basis | core-libs |
 | T44 | RakNet only notices a vanished peer when a reliable message can't be delivered; set the same `SetTimeoutTime` on both ends | misc |
 | T45 | `Alc.OpenDevice()` throws when there is no active default playback device; `ALSOFT_DRIVERS=null` must be set before the first OpenAL call | audio |
+| T46 | Jolt constraints and characters work, but the casts, motor-settings getters, body locks, default filters and every character contact listener are unexported: create constraints from body IDs, down-cast with `Unsafe.BitCast`, use `XxxFilter.Create()` | physics |
 | T47 | BRUTAL's ImGui `OpenGlBackend` and `VulkanBackend` silently never call `AddCallback` draw callbacks | glfw-imgui |
 | T48 | SDL3 drops gamepad input while windows exist but none is focused (hidden test window, background game); set `HintJoystickAllowBackgroundEvents` | sdl |
-| T52 | A single-file publish bundles `Brutal.Monitor.Subprocess.exe`, so Monitor silently writes no crash dumps; mark it `ExcludeFromSingleFile` | shipping |
-| T51 | A hinge motor's torque is unlimited by default and drives an arm through its limits; cap it with `GetMotorSettings().SetTorqueLimit` | physics |
-| T50 | Two packages ship the same notice file name (ImGui + ImGui.Backends); a naive licence-copy target makes `dotnet publish` fail with NETSDK1152 | shipping |
 | T49 | A hand-written ImGui platform glue must send `ImGuiKey.Mod_Ctrl/Shift/Alt/Super`; left/right modifier keys alone give no shortcuts | glfw-imgui |
-| T46 | Jolt constraints and characters work, but the casts, motor-settings getters, body locks, default filters and every character contact listener are unexported: create constraints from body IDs, down-cast with `Unsafe.BitCast`, use `XxxFilter.Create()` | physics |
-| T43 | `floatQuat.CreateFromRotationMatrix` silently returns a non-unit quaternion for a mirrored (left-handed) basis | core-libs |
-| T42 | Box2D contact, hit and sensor events are all off by default; sensors need the flag on both shapes | physics |
-| T41 | Nearly every BRUTAL native DLL needs the VC++ runtime, which Windows doesn't include | shipping |
+| T50 | Two packages ship the same notice file name (ImGui + ImGui.Backends); a naive licence-copy target makes `dotnet publish` fail with NETSDK1152 | shipping |
+| T51 | A hinge motor's torque is unlimited by default and drives an arm through its limits; cap it with `GetMotorSettings().SetTorqueLimit` | physics |
+| T52 | A single-file publish bundles `Brutal.Monitor.Subprocess.exe`, so Monitor silently writes no crash dumps; mark it `ExcludeFromSingleFile` | shipping |
 | B1 | `PtrOwner.Reset(new)` leaks the old memory | core-libs |
 | B2 | `NativeList.Insert(ByteSize, byte)` never grows the size | core-libs |
 | B3 | Explicit `INativeList.Capacity` gets/sets the size | core-libs |

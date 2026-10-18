@@ -4,7 +4,8 @@ This folder holds the knowledge base and verification tools for building on the 
 
 ## Layout
 
-- `.claude/skills/brutal/`: the skill. `SKILL.md` plus `references/*.md`. This is the single source of truth; edit it here.
+- `.claude/skills/brutal/`: the skill. `SKILL.md` plus `references/*.md` (and `references/export-gaps-detail.txt`, a search-only list). This is the single source of truth; edit it here. Keep `SKILL.md` lean: it loads on every trigger.
+- `VERIFICATION-LOG.md`: the dated history of what was verified. Maintainer-only, kept out of the skill so agents building games never load it.
 - `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL. It contains the source of every published package, but no project files.
   - Read it to confirm APIs.
   - Don't edit it.
@@ -20,6 +21,6 @@ This folder holds the knowledge base and verification tools for building on the 
 ## Working rules for this folder
 
 - New BRUTAL projects target `net10.0` with `<AllowUnsafeBlocks>true</AllowUnsafeBlocks>` and reference `Ahwoo.BRUTAL.*` packages from nuget.org.
-- Treat "it compiles" as unverified. Run new native calls, or check them against `Sandbox/ExportAudit`. Use a headless self-test or a snapshot run before calling work done.
+- Treat "it compiles" as unverified. Run new native calls, or search `references/export-gaps-detail.txt` for them. Use a headless self-test or a snapshot run before calling work done.
 - Anything distributable must meet the BRUTAL licence requirements: credits notice, logo before gameplay, `NOTICE.txt` shipped (`references/shipping.md`).
-- When you verify something new or find a new trap, update the skill ("Keeping this skill current" in `SKILL.md`). When you verify a new recipe, add it to `RecipeCheck` so `verify.ps1` keeps checking it. Then run `Sandbox/verify.ps1`, or at least `Sandbox/lint-skill.ps1`.
+- When you verify something new or find a new trap, update the skill (`.claude/skills/brutal/references/maintaining.md`). When you verify a new recipe, add it to `RecipeCheck` so `verify.ps1` keeps checking it. Then run `Sandbox/verify.ps1`, or at least `Sandbox/lint-skill.ps1`.

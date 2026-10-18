@@ -2,7 +2,7 @@
 
 Read this for 2D physics (Box2D) or 3D physics (Jolt). Jolt has 774 declared-but-unexported functions; check the gap list below before calling anything not in the recipe.
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Packages
 
@@ -187,4 +187,4 @@ Box2D: 64 inline maths helpers are missing (`b2Add`, `b2Dot`, `b2Normalize`, `b2
 - **`BodyInterface`:** `AddForces`, `AddImpulses`, `MoveKinematics`, `SetPositionsAndRotations*`, `SetLinearAndAngularVelocities`, `PrepareAddBodies`, `GetTransformedShape`.
 - **`PhysicsSystem`:** `GetBodies`, `GetActiveBodies`, `GetBodyStats`, `GetBounds`, `AddConstraints`, `RemoveConstraints`, `SaveState`, `RestoreState`, `GetPhysicsSettings`, `GetMax*Limit`, `SetCombineFriction`, `SetCombineRestitution`.
 - **Advertised helpers, all unusable in 2026.10.2:** `ContactEventListener`, `BodyAddBatch`, `SetTraceHandler`, `SetAssertHandler`, the `*ToIDMap` helpers.
-- **Partially missing:** `CharacterVirtual`, `NarrowPhaseQuery`, `BroadPhaseQuery`, `SoftBody*`, `Ragdoll*`, `Vehicle*`, `Constraint`. Run the audit for the exact list. Constraints, `CharacterVirtual` and `Character` still work through their exported subset: see 7.34 and T46.
+- **Partially missing:** `CharacterVirtual`, `NarrowPhaseQuery`, `BroadPhaseQuery`, `SoftBody*`, `Ragdoll*`, `Vehicle*`, `Constraint`. For the exact list, search `export-gaps-detail.txt` (e.g. for `CharacterVirtual_`). Constraints, `CharacterVirtual` and `Character` still work through their exported subset: see 7.34 and T46.

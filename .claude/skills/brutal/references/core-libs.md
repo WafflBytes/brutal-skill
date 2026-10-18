@@ -2,7 +2,7 @@
 
 Read this when using pointers, native memory, collections, numerics maths, logging, the job system, localization or crash monitoring, or when an analyzer (BRUTALCORE####) fires.
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
 ## Packages
 

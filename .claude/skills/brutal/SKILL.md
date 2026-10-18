@@ -26,10 +26,11 @@ What's in it:
 ## How to use this skill
 
 1. Follow the rules below; they prevent the failures that cost the most time.
-2. Pick the reference file for each library you'll touch (table below) and read it before writing code. Each file holds that area's packages, C-to-BRUTAL names, source locations, verified recipes, traps and bugs.
-3. Start from a [RUN] recipe rather than writing from memory.
-4. Check `references/traps.md` before calling an API; read the full entry in the named file.
-5. If something isn't covered, confirm it in source with the lookup protocol, run it once, then record it (see "Keeping this skill current").
+2. **New game? Start from a template** ("Starting a new game") and read its generated `CLAUDE.md`. The template already does the publish settings, licence, splash, crash dialog and verify modes, so skip `shipping.md` and `verification.md` unless you change those.
+3. Read the reference file only for each library you **add or change** (table below). Each holds that area's packages, C-to-BRUTAL names, source locations, verified recipes, traps and bugs. For a single name, search (lookup protocol) instead of reading a whole file.
+4. Start from a [RUN] recipe rather than writing from memory.
+5. Check `references/traps.md` before calling an API; read the full entry in the named file.
+6. If something isn't covered, confirm it in source with the lookup protocol, run it once, then record it (`references/maintaining.md`).
 
 ## Rules
 
@@ -42,7 +43,7 @@ What's in it:
 - **R7** Keep SDL/GLFW init, windows and event pumps on the main thread (T16).
 - **R8** Use `u8` literals for strings going to native code (T14).
 - **R9 Follow BRUTAL's conventions:** `var`, `readonly struct`, lowercase numerics, `ByteSize.Of<T>()`, `ElementCount`, stock exceptions only. Details in `references/core-libs.md` and `%NUGET%\ahwoo.brutal.core\<ver>\docs\brutal-conventions.md`.
-- **R10** A distributable isn't done until it meets the licence: credits notice, logo before gameplay, `NOTICE.txt` (`references/shipping.md`).
+- **R10 Licence.** A distributable isn't done until it shows `BRUTAL game development framework is Copyright (c) 2024 Ahwoo Limited.`, shows the BRUTAL logo before gameplay (`BRUTAL/docs/branding/`), and ships `NOTICE.txt` (copy `BRUTAL/NOTICE.txt`) beside the exe. The templates do all three; full checklist in `references/shipping.md`.
 - **R11 Scope.** BRUTAL has no editor, scene graph, renderer or gameplay framework, and won't get them. Build those yourself; don't search BRUTAL for them.
 
 ## Which reference file
@@ -58,12 +59,13 @@ What's in it:
 | Images (Stb), KTX/DDS textures, glTF, meshes, asset files | `references/assets.md` |
 | OpenAL, FMOD, choosing an audio path | `references/audio.md` |
 | RakNet networking, NotCurses terminal UI, native file dialogs | `references/misc.md` |
-| Any binding you haven't seen run (export gaps) | `references/export-gaps.md` |
-| Publishing a single-file exe, the licence | `references/shipping.md` |
-| Self-tests, snapshots, Sandbox tools, upgrading packages | `references/verification.md` |
-| Every known trap and bug, one line each | `references/traps.md` |
+| Any binding you haven't seen run (export gaps) | `references/export-gaps.md`; to check one name, search `references/export-gaps-detail.txt` |
+| Publishing a single-file exe, the licence (not needed when the template's publish is unchanged) | `references/shipping.md` |
+| Self-tests, snapshots, Sandbox tools, upgrading packages (beyond the template's own checks) | `references/verification.md` |
+| Every known trap and bug, one line each, plus a symptom lookup | `references/traps.md` |
+| Recording a new trap, recipe or verification (only after you found one) | `references/maintaining.md` |
 
-Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4, 7.26, 7.37 and 7.39 `core-libs`, 7.5, 7.6, 7.22, 7.27 and 7.34 `physics`, 7.7, 7.11–7.13, 7.29, 7.30 and 7.31 `vulkan`, 7.8, 7.21, 7.35 and 7.36 `glfw-imgui`, 7.9, 7.16, 7.18–7.20 and 7.24 `sdl`, 7.10, 7.25 and 7.38 `assets`, 7.14 `shipping`, 7.17 `opengl`, 7.23, 7.28 and 7.33 `misc`, 7.32 `audio`.
+Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipe numbers (`7.NN`) are stable IDs: to find one, search `references/` for `### 7.NN`.
 
 ## Quick facts
 
@@ -74,9 +76,7 @@ Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus t
 | Versions | 2026.10.0–2026.10.4; each package is versioned independently |
 | Native RIDs | `win-x64`, `linux-x64`, `osx-arm64` (`runtimes/<rid>/native/`). Only win-x64 has been verified |
 | Namespaces | `Brutal`, `Brutal.Pointers`, `Brutal.<Lib>` or `Brutal.<Lib>Api` (`Brutal.SdlApi`, `Brutal.VulkanApi`, `Brutal.JoltApi`) |
-| Repo | Source only: no `.csproj`/`.sln`, generators, T4 templates or tests. Build against the packages; read the repo |
-| Upstream | Per-package `RocketWerkz/brutal.<name>`; `ahwootech/BRUTAL` is the public mirror |
-| Help and bugs | Questions ("how do I…?"): [BRUTAL forums](https://forums.ahwoo.com/forums/brutal/). Bugs only: [GitHub issues](https://github.com/ahwootech/BRUTAL/issues), with package versions, OS/GPU and a minimal repro. **Search the issues before reporting**: Jolt's export gaps are already [#13](https://github.com/ahwootech/BRUTAL/issues/13) |
+| Help and bugs | Questions: [BRUTAL forums](https://forums.ahwoo.com/forums/brutal/). Bugs: GitHub issues; how to report is in `references/maintaining.md` |
 
 Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside the exe.
 
@@ -105,16 +105,15 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
   - SDL renderer: pixel/2D games; runs anywhere, including remote sessions.
   - OpenGL in an SDL window: simple 3D, verified end to end.
   - ImGui (GLFW + OpenGL/Vulkan): debug UI.
-  - Vulkan + Abstractions + VMA: 3D and high performance (windowed swapchain + resize verified, 7.13).
+  - Vulkan + Abstractions + VMA: 3D and high performance.
   - Vulkan compute: GPU compute.
   - NotCurses: terminal.
 - **Physics:** Box2D for 2D; Jolt for 3D, using only the exported subset.
 - **Large worlds:** keep positions in `double3`/`double4x4` and convert with `float3.Pack(in double3, …)` for rendering. There's no floating-origin helper.
-- **Build in from day one:** a `--selftest` mode, a `--snapshot <dir>` mode, the logo splash and credits (R10), and `NOTICE.txt` copied to the output. The template below already has all of them.
 
 ## Starting a new game
 
-Start from a template rather than an empty project. Both are small playable games with the licence splash and credits, `NOTICE.txt` and every third-party notice, a crash dialog and VC++ runtime check, a deterministic `Sim/` layer on a fixed step, `--selftest`, an off-screen `--snapshot`, a windowed `--smoke` driven by synthetic events, and single-file publish already working. `Sandbox/check-template.ps1 -Template <name>` re-verifies each one end to end.
+Start from a template rather than an empty project. Both are small playable games with the licence (R10), every third-party notice, a crash dialog, a VC++ runtime check, a deterministic fixed-step `Sim/`, `--selftest`, `--snapshot`, `--smoke` and single-file publish already working.
 
 | Template | For | Stack |
 |---|---|---|
@@ -122,8 +121,10 @@ Start from a template rather than an empty project. Both are small playable game
 | `Templates/brutal-3d` | 3D games | SDL3 window + OpenGL 4.1 core, Jolt physics (boxes and spheres; rotated boxes for ramps, see T36), chase camera, TrueType text and the logo as GL textures, SDL_mixer, gamepad |
 
 ```text
-dotnet new install <BRUTAL home>/Templates/brutal-sdl      # once per machine (and brutal-3d); dotnet new uninstall <same path> removes it
-dotnet new brutal-3d -n MyGame -o <folder>/MyGame
+dotnet new list brutal                                     # already installed? then skip the installs
+dotnet new install <BRUTAL home>/Templates/brutal-sdl      # once per machine, per template you use
+dotnet new install <BRUTAL home>/Templates/brutal-3d
+dotnet new brutal-sdl -n MyGame -o <folder>/MyGame         # or: dotnet new brutal-3d ...
 ```
 
 Then replace `Sim/` with your game (keep it free of SDL and GL types) and add a self-test check for each rule. The generated `CLAUDE.md` explains the layout and the verify commands. For an online game, remove the template's pause-on-focus-loss (the other player keeps playing) and test with two processes on 127.0.0.1 (`references/misc.md`).
@@ -144,20 +145,20 @@ General rules; library-specific translation is in each reference file.
 | `b2Vec2`, `Vec3`, `Quat` | `float2`, `float3`, `floatQuat` |
 | Opaque `Foo*` | `readonly struct Foo` with `IsNull()` |
 
-Handle structs in the source look empty because `[InteropHandle] readonly partial struct Foo;` generates `record struct Handle(nint Value)`, a `required Handle Pointer`, `IsNull()` and an implicit conversion from `void*`.
+Handle structs in the source look empty because `[InteropHandle]` generates their members (`core-libs.md`).
 
 ## Lookup protocol
 
-Run these from BRUTAL home:
+Search with your Grep tool (or `rg` from BRUTAL home). Pass the pattern as written; don't route regexes through PowerShell strings, which can mangle `\b` and `\s`. Search, then read only the lines you need, never a whole `*.gen.cs` file (some are 25k+ lines).
 
-```text
-rg -n "public static .*\bCreateTexture\(" BRUTAL/Brutal.Sdl          # does it exist? exact signature
-rg -n "^\s+public [^(]+;" BRUTAL/Brutal.Vulkan/Generated/Structs/VkWriteDescriptorSet.gen.cs   # struct fields (Vulkan: one file per struct)
-rg -n "struct SdlVertex\b" -A6 BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs               # SDL family: all structs in one Sdl*.Structs.gen.cs
-rg -n "^\s+\w+ = " BRUTAL/Brutal.Jolt/Generated/Enums/MotionType.gen.cs                      # enum members
-rg -n "^namespace" BRUTAL/Brutal.Core/Pointers/PointerExtensions.cs                           # namespace
-dotnet run -c Release --project Sandbox/ExportAudit -- --detail > audit.txt; rg "missing: .*BoxShape_" audit.txt  # exported? (R2)
-```
+| Question | Pattern | Path |
+|---|---|---|
+| Does it exist? Exact signature | `public static .*\bCreateTexture\(` | `BRUTAL/Brutal.Sdl` |
+| Struct fields (Vulkan: one file per struct) | `^\s+public [^(]+;` | `BRUTAL/Brutal.Vulkan/Generated/Structs/VkWriteDescriptorSet.gen.cs` |
+| SDL struct (all in one file; show ~6 lines after) | `struct SdlVertex\b` | `BRUTAL/Brutal.Sdl/Generated/Sdl.Structs.gen.cs` |
+| Enum members | `^\s+\w+ = ` | `BRUTAL/Brutal.Jolt/Generated/Enums/MotionType.gen.cs` |
+| Namespace | `^namespace` | `BRUTAL/Brutal.Core/Pointers/PointerExtensions.cs` |
+| Exported by the native DLL? (R2) A hit = **missing** | `BoxShape_Create` | `.claude/skills/brutal/references/export-gaps-detail.txt` |
 
 Sources, in priority order:
 1. **`BRUTAL/Brutal.<Lib>/`**. `Generated/` holds the bindings; `Manual/` holds hand-written ergonomics. Generated doc comments link to the upstream C header line.
@@ -173,7 +174,7 @@ Sources, in priority order:
 |---|---|---|
 | T8 | Package READMEs say a GitHub Packages PAT is required | Stale: `Ahwoo.BRUTAL.*` restore anonymously from nuget.org (only internal `RocketWerkz.*` packages need the feed) |
 | T10 | Mixed error styles: `Glfw.Init()` returns bool; SDL `Init`/`Create*`, `SdlImage`/`SdlTtf`/`SdlMixer` loaders and Vulkan throw; `Sdl.Render.*` setters return bool; SDL `Get*` returns null handles; `Stb.Load` returns a null image (T1) | Check every return type |
-| T12 | Extensions live in separate namespaces: `AsPtr` in `Brutal.Pointers.Extensions`, Vulkan helpers in `Brutal.VulkanApi.Abstractions`, ImGui helpers in `Brutal.ImGuiApi.Extensions` | `rg -n "^namespace" <file>` |
+| T12 | Extensions live in separate namespaces: `AsPtr` in `Brutal.Pointers.Extensions`, Vulkan helpers in `Brutal.VulkanApi.Abstractions`, ImGui helpers in `Brutal.ImGuiApi.Extensions` | Search `^namespace` in the file |
 | T13 | BRUTALCORE0009/0010 errors on pointers into managed arrays | stackalloc, native memory, or `fixed` (`references/core-libs.md`) |
 | T14 | BRUTALCORE0011 warns on `string` where a UTF-8 overload exists (ShaderC, Strings) | `"…"u8`; raw string literals take `u8` too |
 | T16 | SDL/GLFW are main-thread only, with no guard (undefined behaviour) | Keep init, windows and pumps on the main thread |
@@ -181,28 +182,19 @@ Sources, in priority order:
 
 ## Verification
 
-"It compiles" proves little here (R2, R3). Before calling work done: build with analyzer warnings fixed, run a headless `--selftest`, run a `--snapshot` and look at the images, run every new native call once, and run published output from an empty folder. Details and the Sandbox tools are in `references/verification.md`.
+"It compiles" proves little here (R2, R3). **Done means:**
+1. Build with analyzer warnings fixed.
+2. A headless `--selftest` with one check per game rule you added.
+3. One `--snapshot` run, and look at the images.
+4. Every new native call has run at least once.
+5. If it's shared: one publish, run from an empty folder.
 
-## Licence (summary)
-
-A distributed product must show `BRUTAL game development framework is Copyright (c) 2024 Ahwoo Limited.`, show the BRUTAL logo before gameplay (`BRUTAL/docs/branding/`), and ship `NOTICE.txt` (copy `BRUTAL/NOTICE.txt`) beside the exe. Full checklist: `references/shipping.md`.
+Match the effort to the task. Don't build extra harnesses (multi-window bots, thousands of state comparisons) unless the user asks or the feature is networked, and then reuse recipe 7.33's two-process pattern (`misc.md`) rather than writing your own. The template commands are in its `CLAUDE.md`; the Sandbox tools are in `references/verification.md`.
 
 ## Not in the repo (don't search for it)
 
-- Project, solution and build files ("coming", per the README).
-- Generators (`Brutal.*.Generate`) and T4 templates (Numerics, Core enums, Localization).
-- Analyzer and interop-generator source (their behaviour is in `references/core-libs.md`).
-- Tests, samples, and per-package guides (`src/*/README.md`, `Manual/*.md`).
-- Source for `Render.Common`/`Render.Debug` and `Brutal.Monitor.Subprocess`.
-- Any C# API for FreeType or ZLib (they're native-only).
+Project, solution and build files; generators (`Brutal.*.Generate`) and T4 templates; analyzer and interop-generator source (behaviour in `references/core-libs.md`); tests, samples and per-package guides; source for `Render.Common`/`Render.Debug` and `Brutal.Monitor.Subprocess`; any C# API for FreeType or ZLib (native-only).
 
 ## Keeping this skill current
 
-When you verify something new or find a trap, record it so the next session doesn't rediscover it:
-- Put the detail in the reference file for that library: a recipe, a new `T#`/`B#` row (next free IDs: T53, B11), or a marker change to [RUN].
-- Add a one-line row for any new `T#`/`B#` to `references/traps.md`.
-- Add a dated line to the verification log in `references/verification.md`.
-- If it's a runnable recipe, add it to `Sandbox/RecipeCheck` so `Sandbox/verify.ps1` keeps checking it.
-- Run `Sandbox/lint-skill.ps1` to confirm every ID has exactly one entry and every referenced file exists.
-
-These files live in BRUTAL home under `.claude/skills/brutal/`. If you're working in a game folder, edit them there (see "BRUTAL home" above to locate it). If the skill is installed read-only, tell the user what you found instead.
+Found a new trap, a wrong name, or verified something not covered? Record it so the next session doesn't rediscover it: follow `references/maintaining.md` (read it only then).

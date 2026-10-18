@@ -2,9 +2,9 @@
 
 Read this before calling any binding you haven't seen run, especially Jolt, Box2D maths, ImPlot or Slang.
 
-Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
+Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
-Found by `Sandbox/ExportAudit`, which compares each package's P/Invoke imports with its native PE exports. Calls to these compile, then throw `EntryPointNotFoundException`. Re-run it after upgrading: `dotnet run -c Release --project Sandbox/ExportAudit -- --detail` (lines look like `missing: jolt jolt!BoxShape_Create_3`). It follows the Windows renames done by package resolvers (`glfw`→`glfw3`, `openal`→`OpenAL32`, `shaderc`→`shaderc_shared`, `vulkan`→System32 `vulkan-1`). It doesn't audit function pointers loaded at runtime (GLAD, Vulkan device functions).
+Found by `Sandbox/ExportAudit`, which compares each package's P/Invoke imports with its native PE exports. Calls to these compile, then throw `EntryPointNotFoundException`. **To check one function, search `export-gaps-detail.txt`** (a hit means missing); don't run the audit for that, since restoring it downloads all 50 packages. Maintainers regenerate the list after upgrading (`maintaining.md`): `dotnet run -c Release --project Sandbox/ExportAudit -- --detail` (lines look like `missing: jolt jolt!BoxShape_Create_3`). It follows the Windows renames done by package resolvers (`glfw`→`glfw3`, `openal`→`OpenAL32`, `shaderc`→`shaderc_shared`, `vulkan`→System32 `vulkan-1`). It doesn't audit function pointers loaded at runtime (GLAD, Vulkan device functions).
 
 | Package | Imports | Missing | What |
 |---|---|---|---|

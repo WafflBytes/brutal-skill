@@ -2,8 +2,8 @@
 #   powershell -ExecutionPolicy Bypass -File Sandbox/check-upgrades.ps1          # report only
 #   powershell -ExecutionPolicy Bypass -File Sandbox/check-upgrades.ps1 -Apply   # also bump every Ahwoo.BRUTAL.*
 #                                                                                  # version in Sandbox/ and Templates/
-# After -Apply: run Sandbox/verify.ps1, compare ExportAudit with references/export-gaps.md, re-check traps that
-# RecipeCheck guards (T36, T40, T42), then update SKILL.md's "Verified against" line and verification.md.
+# After -Apply: run Sandbox/verify.ps1, compare ExportAudit with references/export-gaps.md (and regenerate export-gaps-detail.txt), re-check traps that
+# RecipeCheck guards (T36, T40, T42), then update SKILL.md's "Verified against" line and VERIFICATION-LOG.md.
 # Exit code: 0 = everything current, 1 = updates available (or applied), 2 = nuget.org unreachable.
 param([switch]$Apply)
 
@@ -92,5 +92,5 @@ foreach ($p in $projects) {
         Write-Host "updated $($p.FullName.Substring($root.Path.Length + 1))"
     }
 }
-Write-Host "`nVersions bumped (BRUTAL/ source left alone: pull it yourself). Next: Sandbox/verify.ps1, then update SKILL.md and references/verification.md."
+Write-Host "`nVersions bumped (BRUTAL/ source left alone: pull it yourself). Next: Sandbox/verify.ps1, then update SKILL.md and VERIFICATION-LOG.md."
 exit 1
