@@ -24,7 +24,7 @@ Nothing in CI covers a display or a GPU: run the full `verify.ps1` on a desktop 
 
 | Tool | Covers | Checks | Pass means |
 |---|---|---|---|
-| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.28, 7.32, 7.34–7.37; trap checks T30, T36 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
+| `RecipeCheck` | Recipes 7.1–7.8, 7.10, 7.11, 7.18–7.28, 7.32, 7.34–7.38; trap checks T30, T36 | Runs each recipe and asserts its result (Box2D/Jolt bodies settle, SPIR-V magic, Stb PNG round trip, T1 null image, GPU listed) | Exit 0. Filter with `-- 7.6` or `-- jolt`; `--no-window` uses GLFW's Null platform; `--no-vulkan` skips 7.11 |
 | `VulkanWindow` | Recipe 7.13 | GLFW window + surface, swapchain, render pass, a triangle, a live resize with swapchain rebuild; reads the presented image back before and after | Exit 0. Opens a window for ~3 s; skipped by `verify.ps1 -NoWindow` or `-NoVulkan`. `-- --no-size-check` shows which resize signal the driver sends |
 | `VulkanDepth` | Recipe 7.29 | Off-screen (no window): depth image, render pass with depth, vertex/index buffers, push-constant MVP matrices, culling; reads pixels back and repeats with the depth test off as a control | Exit 0. Needs a Vulkan GPU, no display; skipped by `verify.ps1 -NoVulkan` |
 | `VulkanTexture` | Recipe 7.30 | Off-screen (no window): staging-buffer upload of RGBA pixels, layout barriers, sampler, descriptor set, fragment-shader sampling; reads pixels back (orientation, nearest filter, sRGB vs UNorm) | Exit 0. Needs a Vulkan GPU, no display; skipped by `verify.ps1 -NoVulkan` |

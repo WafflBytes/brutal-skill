@@ -59,3 +59,4 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | B7 | ImGui Vulkan backend's out-of-date checks never run | glfw-imgui |
 | B8 | `NativeList<T>.GetEnumerator` allocates | core-libs |
 | B9 | `Mem` doesn't track memory, despite the conventions doc | core-libs |
+| B10 | `TextureLoader.LoadFromMemory` never transcodes Basis KTX2 (throws, leaks the handle) | assets |

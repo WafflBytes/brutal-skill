@@ -49,6 +49,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.35", "ImGui on SDL + OpenGL (hand-written glue)", noWindow ? () => throw new SkipException("--no-window") : Recipes.ImGuiSdlRecipe),
     ("7.36", "ImGui on SDL_RenderGeometry (software renderer)", Recipes.ImGuiSdlRenderRecipe),
     ("7.37", "Localization: LString, ResX provider, B6", Recipes.LocalizationRecipe),
+    ("7.38", "Texture: Basis KTX2 (T32), DDS, LoadFromMemory", Recipes.TextureRecipe),
 };
 
 var failed = 0;

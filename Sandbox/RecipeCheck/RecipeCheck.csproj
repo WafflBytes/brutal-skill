@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Runs skill recipes 7.1-7.8, 7.10 (Stb round trip), 7.11, 7.18-7.20 (SDL satellites) and 7.21 (ImGui), 7.35 and 7.36 (ImGui on SDL), 7.32 (OpenAL), 7.34 (Jolt constraints, compounds, characters) 7.37 (Localization) and T30 (OpenAL licence files). Exit code = number of failed recipes. -->
+  <!-- Runs skill recipes 7.1-7.8, 7.10 (Stb round trip), 7.11, 7.18-7.20 (SDL satellites) and 7.21 (ImGui), 7.35 and 7.36 (ImGui on SDL), 7.32 (OpenAL), 7.34 (Jolt constraints, compounds, characters) 7.37 (Localization), 7.38 (Texture) and T30 (OpenAL licence files). Exit code = number of failed recipes. -->
   <ItemGroup>
     <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
     <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.2" />
@@ -23,6 +23,7 @@
     <PackageReference Include="Ahwoo.BRUTAL.OpenGl" Version="2026.10.1" />
     <PackageReference Include="Ahwoo.BRUTAL.OpenAl" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Localization" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Texture" Version="2026.10.2" />
   </ItemGroup>
   <!-- The licence-copy target from references/shipping.md (checked for OpenAL by T30). -->
   <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">
