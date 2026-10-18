@@ -1,25 +1,19 @@
-# Physics: Box2D v3 and Jolt
+# Physics 3D: Jolt
 
-Read this for 2D physics (Box2D) or 3D physics (Jolt). Jolt has 774 declared-but-unexported functions; check the gap list below before calling anything not in the recipe.
+Read this for 3D physics (Jolt). For 2D physics read `box2d.md`. Jolt has 774 declared-but-unexported functions; check the gap list below before calling anything not in the recipes.
 
 Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
-## Packages
+## Package
 
 Column key: **H** = headless (no window or GPU needed); **Gen** = generated bindings (`*.gen.cs`), **Hand** = hand-written, **Manual** = hand-written ergonomics over generated code.
 
 | Package | Namespace | Native (win-x64) | H | Gen | Notes |
 |---|---|---|---|---|---|
 | Jolt | `Brutal.JoltApi` | jolt.dll (custom C shim) | **yes** | Gen | "Highly experimental"; export gaps: `export-gaps.md` and the list below |
-| Box2D | `Brutal.Box2DApi` | box2d.dll v3 | **yes** | Gen+Manual | IDs are record structs with instance methods |
 
 ## Name translation
 
-**Box2D v3**
-- `b2World_Step(w, …)` → `w.Step(…)`; `b2CreateWorld` → `Box2D.CreateWorld`; `b2MakeBox` → `Box2D.MakeBox`.
-- `b2DefaultWorldDef()` → `B2WorldDef.Default with { … }` (same for `B2BodyDef`/`B2ShapeDef`).
-
-**Jolt**
 - `JPH::PhysicsSystem::Update` → `physics.Update(…)`. It goes through the C shim `PhysicsSystem_Update`; C++ overloads become shim names `_2`, `_3`.
 - The `E` enum prefix is dropped (`EMotionType` → `MotionType`, `EActivation` → `Activation`).
 - `BodyID` → `uint`, `ObjectLayer` → `ushort`, `BroadPhaseLayer` → `byte`.
@@ -29,21 +23,8 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | What | File:line |
 |---|---|
 | Jolt `Factory.Instance` | `Brutal.Jolt/Manual/Handles.cs:14` |
-| Box2D default defs | `Brutal.Box2D/Structs.cs:99,189,195` |
 
 ## Recipes
-
-### 7.5 Box2D [RUN]
-```csharp
-var world = Box2D.CreateWorld(B2WorldDef.Default with { Gravity = new float2(0, -10) });
-var ground = world.CreateBody(B2BodyDef.Default with { Position = new float2(0, -1) });
-ground.CreatePolygonShape(B2ShapeDef.Default, Box2D.MakeBox(50, 1));
-var body = world.CreateBody(B2BodyDef.Default with { Type = B2BodyType.Dynamic, Position = new float2(0, 10) });
-body.CreatePolygonShape(B2ShapeDef.Default, Box2D.MakeBox(0.5f, 0.5f));
-for (var i = 0; i < 60; i++) world.Step(1 / 60f, 4);
-float2 pos = body.GetPosition();
-world.Dispose();
-```
 
 ### 7.6 Jolt [RUN]
 ```csharp
@@ -143,23 +124,6 @@ ch.ExtendedUpdate(1 / 60f, gravity, in stairs, bpf, olf, bf, sf, temp);   // or 
 - **`Character`** (the body-based controller) also works: `CharacterSettings.Create()` (`SetShape`, `SetLayer`, `SetUp`, `SetMass`, `SetFriction`), `Character.Create(settings, pos, rot, userData, physics)`, `AddToPhysicsSystem(Activation.Activate)`, call `PostSimulation(0.05f)` after every `physics.Update`, `SetLinearVelocity`, `GetGroundState()`, `RemoveFromPhysicsSystem()`, `Dispose()`. It stood on the floor (y 0.79) and moved when pushed. Prefer `CharacterVirtual` for player movement; use `Character` when the character should be an ordinary body that other bodies push.
 - **No contact callbacks:** `ManagedCharacterContactListener` can't be constructed (its native proxy is unexported), so `CharacterVirtual` has no `OnContactAdded` / `OnContactSolve` (no custom push-back, no moving-platform hooks); the recipe fails the day that changes.
 
-### 7.22 Box2D contact, hit and sensor events [RUN]
-Every event flag is **off by default** in `B2ShapeDef.Default`, including on sensors (T42). Opt in per shape:
-```csharp
-var sensor = zone.CreatePolygonShape(B2ShapeDef.Default with { IsSensor = true, EnableSensorEvents = true }, Box2D.MakeBox(2, 0.5f));
-var ball = body.CreateCircleShape(
-    B2ShapeDef.Default with { EnableContactEvents = true, EnableHitEvents = true, EnableSensorEvents = true }, // the visitor opts in too
-    new B2Circle { Center = float2.Zero, Radius = 0.5f });
-world.Step(1 / 60f, 4);
-var c = world.GetContactEvents();          // valid until the next Step
-for (var i = 0; i < c.BeginCount; i++) { ref var e = ref c.BeginEvents[i]; /* e.ShapeIdA, e.ShapeIdB, e.Manifold */ }
-for (var i = 0; i < c.HitCount; i++)   { ref var h = ref c.HitEvents[i];   /* h.Point, h.Normal, h.ApproachSpeed: impact sounds */ }
-// c.EndEvents / c.EndCount work the same way
-var s = world.GetSensorEvents();           // BeginEvents/EndEvents with SensorShapeId, VisitorShapeId
-```
-- `B2Shape` is a record struct, so `==` compares ids. Map shapes back to game objects with `shape.SetUserData(nint)` / `GetUserData()`.
-- Hit events fire only above the world's hit-speed threshold (`world.SetHitEventThreshold`, default 1 m/s).
-
 ## Traps
 
 | ID | Trap | Fix |
@@ -168,15 +132,11 @@ var s = world.GetSensorEvents();           // BeginEvents/EndEvents with SensorS
 | T6 | Declared but not exported, e.g. `BoxShape.Create(float3)` → `EntryPointNotFoundException: BoxShape_Create_3` | See the Jolt gaps below. For primitive Jolt shapes (box, sphere, capsule, cylinder) use `XxxShapeSettings.Create(…).CreateShape()`; that does **not** work for mesh, hull or height field (T36) |
 | T7 | `jolt/README.md` uses `EMotionType`/`EActivation`, which don't exist | `MotionType` / `Activation` |
 | T18 | Jolt teardown out of order is a use-after-free: physics holds raw pointers to the layer tables | Bodies → physics → jobs/temp → filter tables → `UnregisterTypes` → `Factory.DestroyInstance` |
-| T23 | `Box2D.cs:11-16` loads `box2dd` under `#if DEBUG` | Matters only when building from source |
 | T25 | Jolt is "highly experimental"; its API changes between versions | Pin the version and re-run ExportAudit after upgrading |
-| T42 | **Every Box2D event flag defaults to off** in this build: `B2ShapeDef.Default` has `EnableContactEvents`, `EnableHitEvents` and `EnableSensorEvents` all false. Box2D v3.0 defaulted contact events to on, so code written for it silently gets no events. Sensor events need the flag on **both** the sensor and the visitor shape [RUN] | Set the flags in every shape def that should report. `RecipeCheck 7.22` fails if the defaults change |
 | T36 | **Mesh, convex-hull and height-field shapes can't be created in Jolt 2026.10.2.** `MeshShapeSettings.Create(triangles, materials)`, `ConvexHullShapeSettings.Create(points)` and `HeightFieldShapeSettings.Create(samples, …)` resolve and run, but the data never reaches Jolt, so `CreateShape()` throws `JoltException` ("Need triangles to create a mesh shape!", "Need at least 3 points to make a hull", "HeightFieldShape: Sample count too low!" even with 64×64 samples). Every other route is unexported: `Create()`, `MeshShapeSettings.Create(vertices, indexedTriangles)`, `SetTriangleVertices`, `SetIndexedTriangles`, `SetPoints`, `SetHeightSamples`. Same geometry works in upstream Jolt 5.6.0. Reported as [ahwootech/BRUTAL#13](https://github.com/ahwootech/BRUTAL/issues/13); RocketWerkz says it's fixed internally (2026-10-15), not yet released [RUN] | Build level collision from primitives: `StaticCompoundShapeSettings.Create()` + `AddShape(position, rotation, boxSettings)` per piece, then `CreateShape()` [RUN: a ball rests on it]. For terrain, approximate with boxes; for dynamic convex objects, use box/sphere/capsule or a compound of them. On upgrade, `RecipeCheck` check `T36` fails as soon as the bug is fixed |
 | T46 | **Jolt constraints and characters work, but their supporting calls are unexported (2026.10.2).** Missing: the casts `Constraint.AsHingeConstraint` and the other `Constraint.AsXxx()` (and `ConstraintSettings.AsSwingTwistConstraintSettings`); `MotorSettings.GetSpringSettings`, so every `Hinge/Slider/SixDOF/SwingTwist...ConstraintSettings.Get/SetMotorSettings` and `GetLimitsSpringSettings`; the body locks `BodyLockRead/Write.Create/GetBody` (so no `Body` pointer from an ID, and `settings.Create(Body, Body)` is unusable); `PhysicsSystem.AddConstraints/RemoveConstraints/GetConstraints`, `GetDefaultBroadPhaseLayerFilter`, `GetDefaultLayerFilter`; every `CharacterContactListener` proxy (`new ManagedCharacterContactListener` throws `EntryPointNotFoundException`, so no contact callbacks or push-back control); on characters `GetActiveContacts`, `CheckCollision*`, `GetTransformedShape`, `CharacterVsCharacterCollision`, `Get/SetSupportingVolume`. Found by `ExportAudit` and run in 7.34 [RUN] | Create constraints with `BodyInterface.CreateConstraint(settings, id1, id2)`; reach `HingeConstraint` calls with `Unsafe.BitCast<TwoBodyConstraint, HingeConstraint>(c)`; set motors through the constraint (`SetMotorState`, `SetTargetAngularVelocity`, and `GetMotorSettings().SetTorqueLimit`, which is exported [RUN]); use `XxxFilter.Create()` for allow-all filters; wake bodies after `RemoveConstraint` with `ActivateBody`; do contact reactions in `Sim/` by distance checks. Vehicles, ragdolls, soft bodies and the path, gear, pulley, rack-and-pinion and six-DOF constraints weren't run |
 
 ## Export gaps
-
-Box2D: 64 inline maths helpers are missing (`b2Add`, `b2Dot`, `b2Normalize`, `b2MakeRot`, `b2Rot_*`, `b2AABB_*`…); use Numerics instead.
 
 **Jolt gaps:**
 - **Shape creation:**

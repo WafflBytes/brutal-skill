@@ -4,6 +4,15 @@ A 2D game built on the BRUTAL C# framework (SDL3 renderer, SDL_ttf text, SDL_mix
 
 **Use the `brutal` skill for every BRUTAL API.** BRUTAL isn't in model training data, and plausible API names are often wrong. Confirm names in the skill or in BRUTAL source before calling them, and run every new native call at least once.
 
+## What to read (saves tokens)
+
+The Layout list below says what every file does; you don't need to open a file to know that. To build your game, read only:
+- `Sim/World.cs`, `Sim/Input.cs` and `Sim/ScreenFlow.cs`: you replace these.
+- `Platform/Gfx.cs` (drawing) and, for new keys or sounds, the `OnKeyPressed`/`ReadInput`/`FixedStep` parts of `Platform/App.cs` (search for them; it's the largest file).
+- `SelfTest.cs`, to add a check per rule.
+
+Leave the rest unopened unless you change that area: `Program.cs`, `Platform/NativeDialog.cs`, `Resources.cs`, `Screenshot.cs`, `SnapshotRun.cs`, `TextRenderer.cs`, `Audio.cs`, the `.csproj` (publish and licence targets), `Assets/Fonts/OFL.txt`, `Assets/NOTICE.txt` and `README.md`. They already work and `check-template` verified them. Likewise skip the skill's `shipping.md` and `verification.md` unless you change publishing or the verify modes.
+
 ## Layout
 
 - `Sim/`: the game itself. Pure C#, deterministic, fixed 1/60 s step. **No SDL types here** (skill rule R6), so it runs in the self-test.
@@ -36,4 +45,4 @@ Other licences the build already handles: the font's SIL OFL text ships as `OFL-
 
 ## When you learn something about BRUTAL
 
-If you find a new trap, a wrong API name, or verify a call the skill doesn't cover, record it in the **brutal skill** (follow "Keeping this skill current" in its `SKILL.md`), not only here. That way every future project benefits.
+If you find a new trap, a wrong API name, or verify a call the skill doesn't cover, record it in the **brutal skill** (follow its `references/maintaining.md`), not only here. That way every future project benefits.

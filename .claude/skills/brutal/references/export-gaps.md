@@ -17,7 +17,7 @@ Found by `Sandbox/ExportAudit`, which compares each package's P/Invoke imports w
 | FMOD | 575 | 575 | No native binaries shipped (T21); expected |
 | All others | — | 0 | SDL family, ImGui, ImGui.FreeType, ShaderC, VMA, stb, Ktx, Gli, MeshOptimizer, NFD, NotCurses, RakNet, OpenAL, GLAD, Vulkan loader |
 
-The full Jolt gap list (shapes, `Shape`, `BodyInterface`, `PhysicsSystem`, helpers) is in `physics.md`.
+The full Jolt gap list (shapes, `Shape`, `BodyInterface`, `PhysicsSystem`, helpers) is in `jolt.md`.
 
 **Exported isn't always working:** some exported Jolt calls bind to the wrong native overload and silently drop their arguments (T36). An empty ExportAudit row proves the symbol exists, not that it works; still run each new call once (R2).
 

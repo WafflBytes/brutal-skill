@@ -4,6 +4,15 @@ A 3D ball-rolling coin hunt built on the BRUTAL C# framework (SDL3 window, OpenG
 
 **Use the `brutal` skill for every BRUTAL API.** BRUTAL isn't in model training data, and plausible API names are often wrong. Confirm names in the skill or in BRUTAL source before calling them, and run every new native call at least once.
 
+## What to read (saves tokens)
+
+The Layout list below says what every file does; you don't need to open a file to know that. To build your game, read only:
+- `Sim/World.cs`, `Sim/Level.cs` and `Sim/Input.cs`: you replace these. `Sim/Bot.cs` only if the self-test's autopilot must learn your level; `Sim/Physics.cs` only to add shape kinds.
+- `Platform/Renderer.cs` (drawing and HUD) and, for new keys or sounds, the input and `FixedStep` parts of `Platform/App.cs` (search for them; both files are large).
+- `SelfTest.cs`, to add a check per rule.
+
+Leave the rest unopened unless you change that area: `Program.cs`, `Platform/GlWindow.cs`, `GlUtil.cs`, `GlText.cs`, `Mat4.cs`, `Audio.cs`, `SnapshotRun.cs`, `NativeDialog.cs`, `Resources.cs`, the `.csproj` (publish and licence targets), `Assets/Fonts/OFL.txt`, `Assets/NOTICE.txt` and `README.md`. They already work and `check-template` verified them. Likewise skip the skill's `shipping.md` and `verification.md` unless you change publishing or the verify modes.
+
 ## Layout
 
 - `Sim/`: the game itself. Pure C# plus Jolt (headless), fixed 1/60 s step. **No SDL or GL types here** (skill rule R6), so it runs in the self-test.
@@ -36,4 +45,4 @@ Other licences the build already handles: the font's SIL OFL text ships as `OFL-
 
 ## When you learn something about BRUTAL
 
-If you find a new trap, a wrong API name, or verify a call the skill doesn't cover, record it in the **brutal skill** (follow "Keeping this skill current" in its `SKILL.md`), not only here. That way every future project benefits.
+If you find a new trap, a wrong API name, or verify a call the skill doesn't cover, record it in the **brutal skill** (follow its `references/maintaining.md`), not only here. That way every future project benefits.

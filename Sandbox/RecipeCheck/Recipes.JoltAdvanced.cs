@@ -104,7 +104,7 @@ static unsafe partial class Recipes
         try
         {
             call();
-            Console.WriteLine($"     GAP CLOSED: {what} now works. Update T46 in physics.md and this recipe.");
+            Console.WriteLine($"     GAP CLOSED: {what} now works. Update T46 in jolt.md and this recipe.");
             return false;
         }
         catch (EntryPointNotFoundException)

@@ -6,6 +6,7 @@
 # - no leftover section signs from the old single-file guide, no control characters; SKILL.md stays small
 # - the "next free IDs" note in references/traps.md matches the highest IDs in use
 # - references/export-gaps-detail.txt (the search-only export-gap list) exists and has missing: lines
+# - every method called in the skill's C# recipe blocks exists in BRUTAL/, Sandbox/ or Templates/ source (or is a listed .NET method)
 # - BRUTAL/ (when it is a git clone) at a different commit than SKILL.md's "Verified against" line is a warning, not a failure
 
 $ErrorActionPreference = 'Stop'
@@ -92,6 +93,38 @@ elseif (Test-Path (Join-Path $brutal '.git')) {
         $warnings.Add("BRUTAL/ is at $head but the skill was verified against $verified. Recipes and tables are unverified on newer source. Before a release: re-run verify.ps1, review 'git -C BRUTAL log --stat $verified..HEAD', then update SKILL.md")
     }
 }
+
+# API names: every method called in a ```csharp block of the skill must exist in BRUTAL/ source, or in the Sandbox and
+# template code (helpers a recipe defines), or be a .NET / Microsoft.Extensions.Logging method listed below. This
+# catches a recipe that drifts from the source, or a rename after a package upgrade.
+$dotnetNames = @('AddProvider', 'AddSimpleConsole', 'GetManifestResourceStream', 'ReadExactly', 'SetMinimumLevel', 'WriteAllBytes')
+if (Test-Path $brutal) {
+    $called = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($p in @($skillMd) + ($refFiles | ForEach-Object { $_.FullName })) {
+        $inCs = $false
+        foreach ($line in [IO.File]::ReadAllLines($p)) {
+            if ($line -match '^\s*```') { $inCs = (-not $inCs) -and ($line -match '```csharp'); continue }
+            if (-not $inCs) { continue }
+            foreach ($m in [regex]::Matches($line, '\.([A-Z][A-Za-z0-9_]*)\(')) { [void]$called.Add($m.Groups[1].Value) }
+        }
+    }
+    foreach ($n in $dotnetNames) { [void]$called.Remove($n) }
+    if ($called.Count -gt 0) {
+        $alt = ($called | ForEach-Object { [regex]::Escape($_) }) -join '|'
+        $declRegex = New-Object regex ("\b($alt)\s*(<[^>()]*>)?\s*\(", 'Compiled')
+        $roots = @($brutal, (Join-Path $PSScriptRoot '.'), (Join-Path $PSScriptRoot '..\Templates'))
+        foreach ($root in $roots) {
+            foreach ($f in [IO.Directory]::EnumerateFiles($root, '*.cs', 'AllDirectories')) {
+                if ($f -match '[\\/](bin|obj)[\\/]') { continue }
+                foreach ($m in $declRegex.Matches([IO.File]::ReadAllText($f))) { [void]$called.Remove($m.Groups[1].Value) }
+                if ($called.Count -eq 0) { break }
+            }
+            if ($called.Count -eq 0) { break }
+        }
+        foreach ($n in ($called | Sort-Object)) { $problems.Add("recipe code calls .$n(, which isn't in BRUTAL/, Sandbox/ or Templates/ source; fix the name, or add it to `$dotnetNames if it's a .NET method") }
+    }
+}
+else { $warnings.Add("BRUTAL/ is missing, so recipe API names weren't checked") }
 
 # Leftovers and size.
 $all = @($skillMd) + ($refFiles | ForEach-Object { $_.FullName })

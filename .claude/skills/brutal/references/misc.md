@@ -118,8 +118,4 @@ Runnable copy: `Sandbox/NetSession` (about 600 lines in three files; `NetPeer.cs
 var path = NativeFileDialog.OpenDialog(new FileDialogInfo { Filters = [new FilterItem { Name = "Images", Spec = "png,jpg" }] }, out var r);
 ```
 
-**glTF** [DOC]. `LightData` is nullable.
-```csharp
-var model = GltfUtility.LoadModel("m.glb");
-var buf = model.LoadBinaryBuffer(0, "m.glb");
-```
+glTF loading is in `assets.md` (7.25, [RUN]).

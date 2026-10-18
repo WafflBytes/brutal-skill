@@ -27,7 +27,7 @@ What's in it:
 
 1. Follow the rules below; they prevent the failures that cost the most time.
 2. **New game? Start from a template** ("Starting a new game") and read its generated `CLAUDE.md`. The template already does the publish settings, licence, splash, crash dialog and verify modes, so skip `shipping.md` and `verification.md` unless you change those.
-3. Read the reference file only for each library you **add or change** (table below). Each holds that area's packages, C-to-BRUTAL names, source locations, verified recipes, traps and bugs. For a single name, search (lookup protocol) instead of reading a whole file.
+3. Read the reference file only for each library you **add or change** (table below). Each holds that area's packages, C-to-BRUTAL names, source locations, verified recipes, traps and bugs. For a single name, search (lookup protocol) instead of reading a whole file. For one recipe, search the file for `^#` to get the section line numbers, then read its name-translation section, that recipe and its Traps table only.
 4. Start from a [RUN] recipe rather than writing from memory.
 5. Check `references/traps.md` before calling an API; read the full entry in the named file.
 6. If something isn't covered, confirm it in source with the lookup protocol, run it once, then record it (`references/maintaining.md`).
@@ -53,9 +53,11 @@ What's in it:
 | Pointers, `Mem`, `NativeList`, Numerics maths, logging, jobs, localization, crash monitor, any BRUTALCORE analyzer | `references/core-libs.md` |
 | SDL3 window, 2D renderer, pixel buffer, input, gamepad, screenshots; images (Sdl.Image), TrueType text (Sdl.Ttf), sound and music (Sdl.Mixer) | `references/sdl.md` |
 | OpenGL (GLAD) in an SDL window, FBOs, post-processing | `references/opengl.md` (plus `sdl.md`) |
-| GLFW windows, Dear ImGui / ImPlot debug UI, RenderDoc | `references/glfw-imgui.md` |
+| GLFW windows, Dear ImGui / ImPlot on GLFW, RenderDoc | `references/glfw-imgui.md` |
+| Dear ImGui inside an SDL3 game (OpenGL or the SDL renderer) | `references/imgui-sdl.md` |
 | Vulkan (instance, compute, swapchain), VMA, ShaderC, Slang | `references/vulkan.md` |
-| Box2D (2D) or Jolt (3D) physics | `references/physics.md` |
+| Box2D (2D physics) | `references/box2d.md` |
+| Jolt (3D physics) | `references/jolt.md` |
 | Images (Stb), KTX/DDS textures, glTF, meshes, asset files | `references/assets.md` |
 | OpenAL, FMOD, choosing an audio path | `references/audio.md` |
 | RakNet networking, NotCurses terminal UI, native file dialogs | `references/misc.md` |

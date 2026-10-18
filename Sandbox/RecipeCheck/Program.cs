@@ -220,7 +220,7 @@ static unsafe partial class Recipes
         Check(Math.Abs(p.Y - 0.5f) < 0.1f, $"ball rests on the floor (y={p.Y})");
     }
 
-    // T36 (skill references/physics.md; ahwootech/BRUTAL issue #13): in Jolt 2026.10.2 the data-taking
+    // T36 (skill references/jolt.md; ahwootech/BRUTAL issue #13): in Jolt 2026.10.2 the data-taking
     // MeshShapeSettings / ConvexHullShapeSettings / HeightFieldShapeSettings.Create overloads resolve but the data
     // never reaches Jolt, and every other overload/setter is unexported. Passes while that holds; fails once it's
     // fixed upstream, so the skill gets updated. Also checks the static-compound fallback by dropping a ball on it.
@@ -256,7 +256,7 @@ static unsafe partial class Recipes
             if (meshError == null || hullError == null || heightError == null)
                 throw new InvalidOperationException(
                     "T36 no longer reproduces: mesh, hull or height-field creation works. Fixed upstream? "
-                        + "Update references/physics.md and this check."
+                        + "Update references/jolt.md and this check."
                 );
         }
         finally

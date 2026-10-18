@@ -111,7 +111,7 @@ if (Sdl.Init.InitSubSystem(SdlInitFlags.Audio))     // separate from the main In
 
 - **Synthetic input for tests** [RUN]: `var ev = new SdlEvent(); ev.key.type = SdlEventType.KeyDown; ev.key.key = SdlKeycode.Right; ev.key.scancode = SdlScancode.Right; ev.key.down = 1; Sdl.Events.PushEvent(&ev);` (same for `KeyUp`, and `ev.window.type = SdlEventType.WindowFocusLost`). Pushed events go through `PollEvent` like real ones but do **not** change `GetKeyboardState`, so track held keys from KeyDown/KeyUp events if a test needs to drive movement. The template's `--smoke` does this.
 - **Focus loss:** on `SdlEventType.WindowFocusLost`, clear held keys (their KeyUp goes to the other window) and pause.
-- **Dear ImGui in an SDL game:** no shipped backend, but a small event glue plus `OpenGlBackend` (OpenGL window, 7.35) or a `SDL_RenderGeometry` renderer (plain SDL renderer, 7.36) works; both are [RUN] in `glfw-imgui.md`.
+- **Dear ImGui in an SDL game:** no shipped backend, but a small event glue plus `OpenGlBackend` (OpenGL window, 7.35) or a `SDL_RenderGeometry` renderer (plain SDL renderer, 7.36) works; both are [RUN] in `imgui-sdl.md`.
 
 ### 7.18 SDL_image: load PNG/JPG from memory or file, save, textures [RUN]
 Namespace `Brutal.SdlApi.Image`. No SDL video init needed. Codecs: PNG, JPG, BMP, GIF, QOI, TGA and other dependency-free formats; **not** WEBP, AVIF, JXL or TIFF (T37).

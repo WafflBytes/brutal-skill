@@ -50,7 +50,7 @@ var indices = MemoryMarshal.Cast<byte, ushort>(loader.GetAccessorBufferSpan(prim
 - Enum names are PascalCase (`Triangles`, `Vec3`, `UnsignedShort`), not the spec's `TRIANGLES`/`VEC3`.
 - `GetAccessorBufferSpan` doesn't support sparse accessors. For interleaved buffer views it returns `count * stride` bytes, so step by `bufferView.ByteStride`, not by the element size.
 - Node transforms, materials and images: `loader.GltfJson.Nodes`, `.Materials`, `loader.GetOrLoadImage(i)` [SRC]. Axis helpers: `loader.FlipHandedness()`, `SwapYZAxes()`, `Scale(f)` [SRC].
-- Lower level: `GltfUtility.LoadModel("m.glb")` plus `model.LoadBinaryBuffer(0, "m.glb")` [DOC]. There's no Draco decoding.
+- Lower level: `GltfUtility.LoadModel("m.glb")` plus `model.LoadBinaryBuffer(0, "m.glb")` [DOC]; `LightData` is nullable. There's no Draco decoding.
 
 ### 7.38 Compressed textures: Basis KTX2 and DDS [RUN]
 Checked by `RecipeCheck 7.38` (headless). It makes a Basis KTX2 with libktx's own encoder, so no sample file is needed.
