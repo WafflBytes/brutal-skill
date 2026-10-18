@@ -15,7 +15,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 ## Recipe
 
 ### 7.17 OpenGL 4.1 core in an SDL3 window [RUN]
-Package `Ahwoo.BRUTAL.OpenGl` 2026.10.1 (GLAD; `glad.dll` works inside a single-file publish). Verified on an AMD discrete GPU; other vendors haven't been tested.
+Package `Ahwoo.BRUTAL.OpenGl` (GLAD; works in a single-file publish). Run on AMD only.
 ```csharp
 Sdl.PInvoke.GLSetAttribute(SdlGLAttr.ContextMajorVersion, 4);
 Sdl.PInvoke.GLSetAttribute(SdlGLAttr.ContextMinorVersion, 1);
@@ -42,7 +42,7 @@ Sdl.PInvoke.GLSwapWindow(window);
 - Handle types are record structs: `GlShader`, `GlProgram`, `GlBuffer`, `GlVertexArray`, `GlTexture` (`.Id`); `glBindTexture` takes the raw `uint`.
 - Text without SDL_Renderer: render SDL's 8x8 debug font once into a surface with `Sdl.PInvoke.CreateSoftwareRenderer(Sdl.PInvoke.CreateSurface(128, 48, SdlPixelFormat.Abgr8888))` + `Sdl.Render.RenderDebugText`, then upload `surface->pixels` as a GL texture atlas.
 - Post-processing [RUN]: render into an FBO with `glRenderbufferStorageMultisample` colour (`GL_RGBA8`) + depth (`GL_DEPTH_COMPONENT24`), check `glCheckFramebufferStatus == GL_FRAMEBUFFER_COMPLETE`, resolve with `glBlitFramebuffer` into a texture-backed FBO, then draw a full-screen triangle from `gl_VertexID` (empty VAO) with the effect shader. `GlFramebuffer`/`GlRenderbuffer` are record structs; `default` binds the window.
-- Matrices: Write your own column-major `Mat4` (Perspective, LookAt, rotations) for GL. Numerics `float4x4` has both `CreatePerspectiveFieldOfView` and an `operator *(float4x4, float4)`; its convention wasn't verified for GL upload [SRC].
+- Matrices: the template uses its own column-major `Mat4` (below). Uploading Numerics `float4x4` to GL wasn't run (Vulkan: 7.29).
 
 ### The `brutal-3d` template [RUN]
 `Templates/brutal-3d` is a working SDL3 + OpenGL 4.1 core + Jolt game. Copy its pieces rather than rewriting them:

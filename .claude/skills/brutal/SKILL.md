@@ -5,7 +5,7 @@ description: Verified reference for writing C# games and tools on the BRUTAL fra
 
 # BRUTAL framework
 
-BRUTAL (Ahwoo / RocketWerkz) is a set of C# bindings and helpers for writing games on .NET 10. It's a toolkit, not an engine. Your training data doesn't cover it and its docs are thin, so plausible API names are often wrong: `EMotionType` is really `MotionType`, and `Glfw.GetVersionString` is really `Glfw.PInvoke.GetVersionString`. Everything here was checked against the source or run.
+BRUTAL (Ahwoo / RocketWerkz) is a set of C# bindings and helpers for writing games on .NET 10. It's a toolkit, not an engine. Your training data doesn't cover it and its docs are thin, so plausible API names are often wrong: `EMotionType` is really `MotionType`, and `Glfw.GetVersionString()` is really the `Glfw.VersionString` property. Everything here was checked against the source or run.
 
 **BRUTAL home** is the repository this skill ships in. Every `BRUTAL/`, `Sandbox/` and `Templates/` path in this skill is relative to it. To find it:
 1. If the `BRUTAL_HOME` environment variable is set, use it.
@@ -19,7 +19,7 @@ What's in it:
 
 **Update check (once a session):** in a git clone, run `git -C <home> ls-remote origin main`; if `git -C <home> cat-file -e <hash>^{commit}` fails, a newer skill exists: tell the user and offer `pull --ff-only`. Never pull unasked. Skip if offline.
 
-**Verified against:** `Ahwoo.BRUTAL.*` 2026.10.0–2026.10.4 on .NET 10, Windows x64 only, with `BRUTAL/` source at commit `a25cdf8`. Linux and macOS packages exist but nothing here has been run on them. Last full re-verification: 2026-10-17 (`references/verification.md`).
+**Verified against:** `Ahwoo.BRUTAL.*` 2026.10.0–2026.10.4 on .NET 10, with `BRUTAL/` source at commit `a25cdf8`. Windows x64 is fully verified. Linux x64 runs the headless recipes in CI and WSL2, but not Vulkan, windowed recipes or the templates; each recipe says where it ran. macOS: nothing run. Last full re-verification: 2026-10-18 (`references/verification.md`).
 
 **Markers:** [RUN] = compiled and executed; [SRC] = checked in source, not executed; [DOC] = from a package README, unverified.
 
@@ -76,7 +76,7 @@ Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus t
 | TFM | `net10.0` only. Sources use C# 14 `extension` blocks, `allows ref struct`, `ref` fields, generic math |
 | Packages | 50 × `Ahwoo.BRUTAL.<Name>` on **nuget.org**, restored anonymously. List them with `dotnet package search Ahwoo.BRUTAL --take 100` |
 | Versions | 2026.10.0–2026.10.4; each package is versioned independently |
-| Native RIDs | `win-x64`, `linux-x64`, `osx-arm64` (`runtimes/<rid>/native/`). Only win-x64 has been verified |
+| Native RIDs | `win-x64`, `linux-x64`, `osx-arm64` (`runtimes/<rid>/native/`). win-x64 fully verified; linux-x64 headless recipes only; osx-arm64 not run |
 | Namespaces | `Brutal`, `Brutal.Pointers`, `Brutal.<Lib>` or `Brutal.<Lib>Api` (`Brutal.SdlApi`, `Brutal.VulkanApi`, `Brutal.JoltApi`) |
 | Help and bugs | Questions: [BRUTAL forums](https://forums.ahwoo.com/forums/brutal/). Bugs: GitHub issues; how to report is in `references/maintaining.md` |
 

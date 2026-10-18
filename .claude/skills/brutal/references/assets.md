@@ -38,7 +38,7 @@ image.Dispose();
 ```
 
 ### 7.25 glTF: load a .glb and draw it with OpenGL [RUN]
-Namespace `Brutal.GltfApi` (pure .NET). The recipe writes its own tiny .glb, loads it, draws it with OpenGL 4.1 core (`opengl.md`) and checks the pixels.
+Namespace `Brutal.GltfApi` (pure .NET). Drawn with OpenGL 4.1 core (`opengl.md`).
 ```csharp
 using var loader = new GltfLoader("model.glb");      // parses the JSON; the GLB BIN chunk or .bin files load lazily
 var prim = loader.GltfJson.Meshes[0].Primitives[0];   // check prim.Mode == MeshPrimitive.ModeEnum.Triangles
@@ -53,7 +53,7 @@ var indices = MemoryMarshal.Cast<byte, ushort>(loader.GetAccessorBufferSpan(prim
 - Lower level: `GltfUtility.LoadModel("m.glb")` plus `model.LoadBinaryBuffer(0, "m.glb")` [DOC]; `LightData` is nullable. There's no Draco decoding.
 
 ### 7.38 Compressed textures: Basis KTX2 and DDS [RUN]
-Checked by `RecipeCheck 7.38` (headless). It makes a Basis KTX2 with libktx's own encoder, so no sample file is needed.
+Runnable copy: `RecipeCheck 7.38` (headless).
 ```csharp
 using Brutal.KtxApi; using Brutal.TextureApi;
 // Encode (optional; normally your asset pipeline does this):
@@ -68,11 +68,10 @@ var tex = TextureLoader.LoadFromFile("tex.ktx2", new Brutal.TextureApi.Ktx.Loade
 TextureWriter.SaveToFile(tex, "tex.dds");                     // .ktx/.ktx2, gli's or an stb format, by extension
 TextureLoader.Unload(tex);
 ```
-- With no settings, Basis becomes `BC7_UNorm_Block` (T32): 4096 bytes for 64x64. With `Rgba32` it's `R8G8B8A8_UNorm`, and the worst channel error was 11/255 against the source.
+- With no settings, Basis becomes `BC7_UNorm_Block` (T32); with `Rgba32`, `R8G8B8A8_UNorm`.
 - `TextureLoader.LoadFromMemory` can't load Basis (B10). Do it yourself: `KtxTexture2.CreateFromMemory(bytes, KtxTextureCreateFlagBits.LoadImageDataBit, out var h)`, `h.TranscodeBasis(KtxTranscodeFmt.Rgba32, KtxTranscodeFlagBits.HighQuality)`, `new Brutal.TextureApi.Ktx.KtxTexture(h)`, and `Destroy()` it when done.
-- Check what your encoder produced. On the 64x64 test gradient, `CompressBasis(0)` (ETC1S at libktx's default quality) decoded one 4x4 block as the opposite corner's colour (error 241/255); `CompressBasis(255)` gave 11, and UASTC (`CompressBasisEx` with `Uastc = true`) gave 7. Seen once, not asserted.
-- A DDS written with `TextureWriter` and read back kept the format and every texel.
-- Not run: mipmaps, cube maps, arrays, KTX1, sRGB formats, BC7 decoding (the BC7 bytes weren't checked against the source), uploading to a GPU, `LazyLoad`.
+- `CompressBasis(0)` (ETC1S, default quality) can wreck whole blocks; use a high quality or UASTC (`CompressBasisEx` with `Uastc = true`) and check the output.
+- DDS round-trips exactly. Not run: mipmaps, cube maps, arrays, KTX1, sRGB, GPU upload.
 
 ## Traps
 
@@ -86,4 +85,4 @@ TextureLoader.Unload(tex);
 
 | ID | Where (under `BRUTAL/`) | Bug | Workaround |
 |---|---|---|---|
-| B10 | `Brutal.Texture/Ktx/KtxTextureLoader.cs:40-49`, `Ktx/KtxTexture.cs:45-47` | `Ktx.Loader.LoadFromMemory` (and so `TextureLoader.LoadFromMemory`) never transcodes and ignores `LoadSettings`, so a Basis KTX2 from memory throws `TextureException: Texture is supercompressed.`, and the native handle it created is never destroyed [RUN: 7.38 asserts it] | Load from a file, or create, transcode and wrap it yourself (7.38) |
+| B10 | `Brutal.Texture/Ktx/KtxTextureLoader.cs:40-49`, `Ktx/KtxTexture.cs:45-47` | `Ktx.Loader.LoadFromMemory` (and so `TextureLoader.LoadFromMemory`) never transcodes and ignores `LoadSettings`, so a Basis KTX2 from memory throws `TextureException: Texture is supercompressed.`, and the native handle it created is never destroyed [RUN: 7.38] | Load from a file, or create, transcode and wrap it yourself (7.38) |

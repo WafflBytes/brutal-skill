@@ -125,7 +125,7 @@ scheduler.ExecuteJobs(); scheduler.Wait();                      // parallel-for 
 ```
 
 ### 7.37 Localization [RUN]
-Checked by `RecipeCheck 7.37` (headless). `{Name}` variables; a translation may reorder them, and arguments still follow the template's order.
+Runnable copy: `RecipeCheck 7.37` (headless). `{Name}` variables; a translation may reorder them, and arguments still follow the template's order.
 ```csharp
 using Brutal.Localization; using Brutal.Localization.ResX;
 var strings = new LocalizedStrings();               // or the static LStrings singleton
@@ -139,10 +139,9 @@ coins.Format("Ann", 3);                             // fr "{Count} pieces pour {
 - Setting the provider re-localizes every existing `LString`; one whose id the provider lacks keeps its template. `RemoveLocalizedStringProvider()` returns all to templates.
 - `Localize` with an unknown variable name, and `Format` with the wrong argument count, throw `ArgumentException`.
 - `Format(writer, ...)` into a `RingBufferWriter<char>`: the writer is copied (B6), so a second call overwrites the first result. Format to `string`, or pass a class writer (the recipe's `ArrayCharWriter`), which advances.
-- Not run: the `LStrings` singleton, ResX files on disk, more than two variables, thread safety.
 
 ### 7.39 Monitor: crash dumps, ring logger [RUN]
-Packages `Ahwoo.BRUTAL.Monitor.Host` (pulls in `.Common`); checked by `RecipeCheck 7.39`, which crashes child processes for real. The directories must already exist; call each `Add*` once (T29).
+Package `Ahwoo.BRUTAL.Monitor.Host` (pulls in `.Common`); runnable copy: `RecipeCheck 7.39`. The directories must already exist; call each `Add*` once (T29).
 ```csharp
 using Brutal.Monitor.Common;
 using Monitor = Brutal.Monitor.Monitor;              // clashes with System.Threading.Monitor
@@ -153,17 +152,16 @@ m.AddCollector(new CollectorOptions { DumpPath = "Dumps", LastChance = DumpType.
 LogSystem.Initialize(b => b.AddProvider(m.LogProvider)); // or LogCategory lines never reach the file
 if (!m.SubprocessRunning) { /* no crash dumps this session; T52 after a single-file publish */ }
 ```
-- **Wire it into `Brutal.Logging` yourself.** `m.LogProvider` is an `ILoggerProvider` that nothing registers; `LogCategory` lines logged before `LogSystem.Initialize(b => b.AddProvider(m.LogProvider))` were not in the log or the crash tail. `m.LogProvider.CreateLogger("X")` works without it. Add a console provider in the same builder if you want both.
+- **Wire it into `Brutal.Logging` yourself:** nothing registers `m.LogProvider`, so `LogCategory` lines before that `AddProvider` never reach the log or the crash tail. Add a console provider in the same builder if you want both.
 - Files (`<stem>` = `<name>.<yyMMdd-HHmmss>.<pid>`, the process start time): `Logs/<stem>.log` and `Logs/<stem>.log.ring` (the crash-tail ring, 1024 slots of 4 KB). A clean `Dispose` deletes the ring. Without a `LogFormatter` a line is the bare message, with no level, category or time.
-- `minimumLevel` drops a message before the ring and the file (the Debug line never reached the ring).
-- **Main-thread crash** (unhandled exception, `LastChance = Mini`): exit code `0xE0434352`, about 3 s. `Dumps/LastChance/<stem>.<yyyyMMdd_HHmmss_fff>.dmp` (about 1.9 MB) and `.crash.log` beside it, holding the last line before the throw. The `using` still disposed the Monitor on the way out, so the log file had every line and the ring was kept. The next run with the same name wrote `Logs/<stem>.previous-crash.log` from that ring, deleted it, and moved the dead run's log to `Logs/Archives/<name>.<yyMMdd>.0.log`.
-- **Worker-thread crash, no collector:** nothing disposes, so the subprocess saw the host die without a Stop, saved the ring as `Logs/<stem>.<yyyyMMdd_HHmmss>.abnormal-exit.log` and deleted it; the next run had nothing to recover. The log file still had every line here (the process took about 2 s to die). **On Linux it doesn't** (T53): the subprocess exits with the host, writes no `abnormal-exit.log` and leaves the ring, which the next run recovers as `previous-crash.log`.
-- **First chance** (`FirstChance = Triage`): one handled exception gave a 0.4 MB `Dumps/FirstChance/*.dmp` within 0.2 s, written by the runtime's `createdump` (`.dmp.partial`, then renamed; it prints `[createdump] ...` to stdout). Throttled to one per 10 s; leave it `None` in a shipped game.
-- Setup errors (T29): a name with `/`, `*` or `?` throws `ArgumentException`; a missing `LogDirectory` or `DumpPath` throws `DirectoryNotFoundException`; a second `AddLogger` throws `InvalidOperationException`.
-- Linux: the whole recipe runs on Linux CI and in WSL2 (dumps via `createdump`, exit code 134 for the crash); only the worker-crash path differs (T53). Not run: macOS, `Heap`/`Full` dumps, `KeepCount`/`MaxArchives` pruning, `LogFormatter`, a native crash (access violation) or `Environment.FailFast`, a crash during the dump wait, reading a dump in a debugger.
+- `minimumLevel` drops a message before the ring and the file.
+- **Main-thread crash** (`LastChance = Mini`): `Dumps/LastChance/<stem>.<yyyyMMdd_HHmmss_fff>.dmp` (~2 MB) plus a `.crash.log` tail beside it. The next run with the same name writes `Logs/<stem>.previous-crash.log` from the ring and archives the dead log under `Logs/Archives/`.
+- **Worker-thread crash, no collector:** on Windows the subprocess saves the ring as `Logs/<stem>.<yyyyMMdd_HHmmss>.abnormal-exit.log`. **On Linux it doesn't** (T53).
+- **First chance** (`FirstChance = Triage`): a dump per handled exception in `Dumps/FirstChance/` (throttled to one per 10 s; `createdump` prints to stdout). Leave it `None` in a shipped game.
+- Runs on Windows and Linux. Not run: macOS, native crashes, `Heap`/`Full` dumps, archive pruning.
 
 ### 7.26 Numerics quaternion conventions [RUN]
-Same as System.Numerics, checked by `RecipeCheck 7.26`:
+Same as System.Numerics [RUN: `RecipeCheck 7.26`]:
 - `a * b` rotates by **b first, then a**. `floatQuat.Concatenate(a, b)` is `b * a`, so it rotates by a first.
 - Right-handed: `CreateFromAxisAngle(+Y, +90 deg)` takes +X to -Z. Rotate a vector with `float3.Transform(v, q)`.
 - `float4x4.CreateFromQuaternion(q)` and `floatQuat.CreateFromRotationMatrix(m)` round-trip for a proper rotation. A basis built by hand (right/up/forward vectors) must be right-handed (determinant +1), or you get garbage (T43).
@@ -173,13 +171,13 @@ Same as System.Numerics, checked by `RecipeCheck 7.26`:
 
 | ID | Trap | Fix |
 |---|---|---|
-| T43 | `floatQuat.CreateFromRotationMatrix` assumes a proper rotation. Fed a mirrored (left-handed) basis, as you get from a hand-built right/up/forward with one axis flipped, it returns a **non-unit quaternion** (length 0.707 in the test) with no error. In a 3D eval this made the ramps silently flat [RUN] | Build bases right-handed (`forward = cross(right, up)` order checked) or build the rotation from axis-angle / `CreateFromYawPitchRoll` instead |
+| T43 | `floatQuat.CreateFromRotationMatrix` assumes a proper rotation. Fed a mirrored (left-handed) basis, as you get from a hand-built right/up/forward with one axis flipped, it returns a **non-unit quaternion** with no error [RUN] | Build bases right-handed (`forward = cross(right, up)` order checked) or build the rotation from axis-angle / `CreateFromYawPitchRoll` instead |
 | T19 | Numerics ≠ System.Numerics: `Normalize(zero)` throws; `<`/`>` return `boolN` masks; scalar `CompareTo` throws; `Clamp` follows HLSL when min > max; no `half`. `float4x4` multiply uses `MultiplyAddEstimate`, so it isn't bit-identical across CPUs | `NormalizeOrZero`. Don't rely on bitwise-identical matrix maths for lockstep |
 | T24 | `Platform` throws `PlatformNotSupportedException` outside Windows/Linux/macOS | — |
 | T26 | `LogCategory.Make` uses an unlocked `Dictionary` | Create categories at startup on one thread |
 | T27 | `NativeList<T>.Count`/`Capacity` are `ElementCount` and print as `ElementCount { Value = 10 }` | `.Value` |
 | T29 | Monitor: `AddLogger`/`AddCollector` throw `DirectoryNotFoundException` on a missing directory; a second `AddLogger` throws `InvalidOperationException`; a `name` with a path separator or wildcard throws `ArgumentException` [RUN: 7.39] | Create the directories first; call each `Add*` once at startup |
-| T53 | **Linux: after a crash that skips `Dispose` (an unhandled exception on a worker thread), the Monitor subprocess exits with the host and writes no `abnormal-exit.log`.** On Windows it saves the crash tail itself. The ring file survives, so nothing is lost if the game runs again, but until then the tail exists only as the binary `.log.ring` [RUN: 7.39 in WSL2 and Linux CI; the subprocess was gone within 100 ms of the host. Its source isn't in the repo, so the cause is unknown] | Construct a `Monitor` with the same name early in the next start-up, which writes `<stem>.previous-crash.log`; tell players to restart before sending logs. Main-thread crashes are unaffected: `using` disposes the Monitor |
+| T53 | **Linux: after a crash that skips `Dispose` (an unhandled exception on a worker thread), the Monitor subprocess exits with the host and writes no `abnormal-exit.log`.** On Windows it saves the crash tail itself. The binary `.log.ring` survives [RUN: 7.39, WSL2 and Linux CI] | Construct a `Monitor` with the same name early in the next start-up, which writes `<stem>.previous-crash.log`; tell players to restart before sending logs. Main-thread crashes are unaffected: `using` disposes the Monitor |
 | T31 | `foreach` over `NativeList<T>` allocates (B8) | Iterate `AsSpan()` |
 
 ## Framework bugs (confirmed in source)
@@ -189,7 +187,7 @@ Same as System.Numerics, checked by `RecipeCheck 7.26`:
 | B1 | `Brutal.Memory/PtrOwner.cs:112-116` | `Reset(new)` discards `Release()`'s result, **leaking the old memory** | `Mem.Free(owner.Release()); owner.Reset(newPtr);` |
 | B2 | `Brutal.Collections/NativeList/NativeList.cs:289-308` | `Insert(ByteSize, byte)` never grows the size; its realloc branch skips the capacity | Use `Insert<T>` or `Add` |
 | B3 | same file `:138-142` | Explicit `INativeList.Capacity` gets/sets the size | Use the class `Capacity` |
-| B4 | `Brutal.Maths/RandomExtensions.cs:160-212` | `Next*Unit3` clusters at the poles (**measured 28.8% vs 10%** for abs(z) > 0.9); `PointInSphere` uses sqrt instead of a cube root; `NextDoubleUnit2` uses `float.Tau` | `z = 2u-1, r = √(1-z²), θ = 2πv`; radius `R·∛w` |
+| B4 | `Brutal.Maths/RandomExtensions.cs:160-212` | `Next*Unit3` clusters at the poles; `PointInSphere` uses sqrt instead of a cube root; `NextDoubleUnit2` uses `float.Tau` | `z = 2u-1, r = √(1-z²), θ = 2πv`; radius `R·∛w` |
 | B5 | `Brutal.Concurrency/Jobs/JobRunner.cs:212-218, 281-323` | An exception in `IJob.Run` **kills the process** (try/finally, no catch); `Wait()` busy-spins; thread priority set at `:289` is never restored | Catch inside `Run()`; use `Parallel.For`/`Task` for long work |
 | B6 | `Brutal.Localization/LString.Format.gen.cs:52`, `Buffers/RingBufferWriter.cs:17` | `Format<TWriter>` takes a `ref struct` writer **by value**, so the caller's writer never advances: a second `Format` into the same `RingBufferWriter` overwrites the first [RUN: 7.37 asserts it] | Use the `string`-returning overloads or a class writer |
 | B8 | `Brutal.Collections/NativeList/NativeListOfT.cs:126-130` | `GetEnumerator` allocates via `yield`; the struct enumerator is unused | Iterate `AsSpan()` |

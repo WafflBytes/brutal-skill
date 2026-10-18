@@ -44,11 +44,11 @@ var window = Glfw.CreateWindow(new GlfwWindow.CreateInfo { Title = "Game", Size 
 while (!window.ShouldClose) Glfw.PollEvents();
 window.Dispose(); Glfw.Terminate();
 ```
-- `Glfw.PInvoke.GetVersionString()` → `"3.5.1 Win32 WGL Null EGL OSMesa VisualC DLL"`; `Glfw.VulkanSupported()`.
+- `Glfw.VersionString` (a property wrapping `Glfw.PInvoke.GetVersionString()`) → `"3.5.1 Win32 WGL Null EGL OSMesa VisualC DLL"`; `Glfw.VulkanSupported()`.
 - For CI with no display, call `Glfw.SetInitHint(GlfwInitHint.Platform, (int)GlfwPlatform.Null)` before `Init` [RUN]. Window creation and `PollEvents` work with it (`RecipeCheck -- 7.8 --no-window`).
 
 ### 7.21 Dear ImGui debug UI on GLFW + OpenGL [RUN]
-Packages `Ahwoo.BRUTAL.ImGui`, `.ImGui.Backends`, `.OpenGl` and `.Glfw`. Namespaces `Brutal.ImGuiApi`, `Brutal.ImGuiApi.Backends`, `Brutal.OpenGlApi`, `Brutal.GlfwApi`. Verified with a hidden window, 4.1 core context, both BRUTAL backends, widgets, and a synthetic click. `RecipeCheck -- 7.21`; set `RECIPECHECK_SHOTS=<dir>` to save the frame as a PNG.
+Packages `Ahwoo.BRUTAL.ImGui`, `.ImGui.Backends`, `.OpenGl` and `.Glfw`. Namespaces `Brutal.ImGuiApi`, `Brutal.ImGuiApi.Backends`, `Brutal.OpenGlApi`, `Brutal.GlfwApi`. Runnable copy: `RecipeCheck -- 7.21`.
 ```csharp
 static GlGetProcAddressFunc? s_glLoader;                        // keep rooted: GLAD keeps the pointer (T35)
 
@@ -91,15 +91,15 @@ renderer.Dispose(); platform.Dispose(); ImGui.DestroyContext(); window.Dispose()
 ```
 - `ImGui.Begin/Button/Checkbox/SliderFloat` take `ref` for in/out values and return `bool`. Pointer types are `*Ptr` structs (`ImGuiIOPtr`, `ImDrawDataPtr`), and their fields are `ref` properties.
 - **Synthetic input for tests** [RUN]: call `io.AddMousePosEvent(x, y)` / `io.AddMouseButtonEvent(0, down)` **after** `platform.NewFrame()` and before `ImGui.NewFrame()`, so the backend's own update can't overwrite it. A click takes two frames: down, then up.
-- **SDL games:** BRUTAL has no SDL platform backend (T22), but a hand-written one works: see 7.35 in `imgui-sdl.md`. With no OpenGL at all use the `SDL_RenderGeometry` renderer of 7.36. A separate GLFW tool window or SDL_ttf debug text (`sdl.md` 7.19) are the alternatives.
+- **SDL games:** `imgui-sdl.md` (7.35 with OpenGL, 7.36 on the SDL renderer).
 
 ### 7.42 RenderDoc: opt-in loading [RUN without RenderDoc installed]
-Checked by `RecipeCheck 7.42` on Windows and Linux. Attaching to a real RenderDoc and taking a capture were not run.
+Runnable copy: `RecipeCheck 7.42`. A real capture wasn't run.
 ```csharp
 var attached = RenderDoc.Initialize(new RenderDoc.InitOptions(args));      // loads only if args has --RenderDoc (any case)
 if (RenderDoc.IsAvailable) RenderDoc.StartFrameCapture(default, default);  // guard EVERY call (T54)
 ```
-- Without the switch: `false`, state `NotLoaded`, no DLL touched. With the switch and no RenderDoc: `false` and no exception; state `LoadFail`, `Version` -1.-1.-1.
+- Without the switch, or with it and no RenderDoc, it returns `false` without throwing.
 - It looks only in DLLs already loaded into the process (launched from RenderDoc) and in `C:\Program Files\RenderDoc\renderdoc.dll` by default; `InitOptions.SearchPaths` overrides that.
 - The first attempt latches: later `LoadApi` calls return the cached result. `RemoveHooks()` is the only reset.
 - `RenderDocWindow.Instance.OnImGui()` (package RenderDoc.ImGui) adds a capture UI inside ImGui [DOC].
@@ -110,8 +110,8 @@ if (RenderDoc.IsAvailable) RenderDoc.StartFrameCapture(default, default);  // gu
 |---|---|---|
 | T9 | A stock `glfw3.dll` fails; `GlfwWindow` binds fork-only functions (`glfwSetScrollDetailCallback`, trackpad) at `Glfw.Window.cs:610-612` | Use the packaged binary |
 | T22 | ImGui's **shipped** platform backend is GLFW only (no SDL). Renderers: Vulkan, or OpenGL 4.1+ core (GLSL 410) | Use GLFW, or the hand-written SDL glue of 7.35 (`imgui-sdl.md`) with `OpenGlBackend` |
-| T47 | BRUTAL's `OpenGlBackend` and `VulkanBackend` never call `ImDrawList.AddCallback` callbacks: the OpenGL loop has no `UserCallback` branch, the Vulkan one is a commented-out TODO (`VulkanBackend.cs:199-215`). Nothing fails; the callback just never runs. [RUN] for OpenGL (7.35 asserts it), [SRC] for Vulkan | Draw custom content outside ImGui (before or after `RenderDrawData`), or use a backend that honours callbacks (7.36, `imgui-sdl.md`) |
-| T54 | **No RenderDoc call checks that RenderDoc loaded.** The generated wrappers read the native function table through a null pointer, so `RenderDoc.IsFrameCapturing`, `StartFrameCapture` and the rest throw `NullReferenceException` on every machine without RenderDoc, which means every player's [RUN: 7.42] | Check `RenderDoc.IsAvailable` before each call, or put capture code behind one helper that does |
+| T47 | BRUTAL's `OpenGlBackend` and `VulkanBackend` never call `ImDrawList.AddCallback` callbacks, silently (`VulkanBackend.cs:199-215` is a TODO) [RUN: OpenGL; SRC: Vulkan] | Draw custom content outside ImGui (before or after `RenderDrawData`), or use a backend that honours callbacks (7.36, `imgui-sdl.md`) |
+| T54 | **No RenderDoc call checks that RenderDoc loaded.** Without RenderDoc (every player's machine) every call throws `NullReferenceException` [RUN: 7.42] | Check `RenderDoc.IsAvailable` before each call, or put capture code behind one helper that does |
 
 | ID | Where (under `BRUTAL/`) | Bug | Workaround |
 |---|---|---|---|

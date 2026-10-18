@@ -15,7 +15,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 <ItemGroup><None Include="Assets\NOTICE.txt" Link="NOTICE.txt" CopyToOutputDirectory="PreserveNewest" /></ItemGroup> <!-- licence 2.3 -->
 ```
 - Build with `dotnet publish -c Release -o ../Game-win-x64`. An SDL + Stb game is about 38 MB.
-- Using `Brutal.Monitor`? Keep its watchdog exe out of the bundle (T52) [RUN: a probe publish]:
+- Using `Brutal.Monitor`? Keep its watchdog exe out of the bundle (T52) [RUN]:
   ```xml
   <Target Name="KeepMonitorSubprocessOutOfBundle" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
@@ -68,23 +68,23 @@ A distributed product **must**:
 
 | ID | Trap | Fix |
 |---|---|---|
-| T50 | Two BRUTAL packages can ship a notice with the same file name: `Ahwoo.BRUTAL.ImGui` and `ImGui.Backends` both carry `BRUTAL-IMGUI-THIRD-PARTY-NOTICES.txt` (identical), and two RenderDoc packages share `BRUTAL-RENDERDOC-THIRD-PARTY-NOTICES.txt`. A licence-copy target that links every `LICENSES/*.txt` to `licenses/` builds fine, but `dotnet publish` fails with **NETSDK1152** (multiple publish output files with the same relative path). The templates don't reference ImGui, so this only shows when you add it [RUN: RecipeCheck's publish] | Use the target above: it keys the notices by file name and drops duplicates with `RemoveDuplicates` before linking them |
-| T52 | With the single-file settings above, `IncludeNativeLibrariesForSelfExtract` also bundles `Brutal.Monitor.Subprocess.exe` (it ships as a native asset). `Monitor` looks for it only beside the app or in `runtimes/<rid>/native`, so after publish `SubprocessRunning` is false and **no crash dumps are written**, with no exception [RUN: a probe publish; the subprocess ran in the plain build and not in the single-file exe]. The only notice is an Error on the `Monitor` log category, sent from the constructor, before you can have wired the Monitor's own provider [SRC] | Add the `KeepMonitorSubprocessOutOfBundle` target above: the exe then sits beside the game (2.6 MB) and the subprocess runs. Check `SubprocessRunning` at startup |
-| T41 | Nearly every BRUTAL native DLL imports the Microsoft VC++ runtime: `VCRUNTIME140.dll` (SDL3, SDL_image, SDL_mixer, stb, Box2D, GLFW, GLAD, …), plus `VCRUNTIME140_1.dll` (SDL_ttf, ImGui, Jolt, …) and `MSVCP140.dll` (Jolt, RakNet, ShaderC, VMA, Ktx, Gli, Slang). Windows doesn't include them, and a self-contained .NET publish doesn't bundle them (the .NET runtime links its own CRT statically). Most PCs have them from other software, so the game works for you and fails for a friend with "Unable to load DLL 'SDL3' or one of its dependencies". Found by a skill-free eval run, not by our checks, because every dev machine has the runtime [RUN: import tables read with a PE parser] | Check at start-up and point the player to `vc_redist.x64.exe` (template `Platform/NativeDialog.cs`). Bundling the DLLs beside the exe (app-local deployment) is also possible, but the redistribution right comes from your Visual Studio licence, so decide that yourself. List the requirement in the player README |
+| T50 | Two BRUTAL packages can ship a notice with the same file name (ImGui + ImGui.Backends; the two RenderDoc packages). A naive licence-copy target builds fine, but `dotnet publish` fails with **NETSDK1152** [RUN] | Use the target above, which drops duplicate names |
+| T52 | With the single-file settings above, `IncludeNativeLibrariesForSelfExtract` also bundles `Brutal.Monitor.Subprocess.exe` (it ships as a native asset). `Monitor` looks for it only beside the app, so `SubprocessRunning` is false and **no crash dumps are written**, with no exception [RUN] | Add the `KeepMonitorSubprocessOutOfBundle` target above. Check `SubprocessRunning` at startup |
+| T41 | Nearly every BRUTAL native DLL imports the Microsoft VC++ runtime: `VCRUNTIME140.dll` (SDL3, SDL_image, SDL_mixer, stb, Box2D, GLFW, GLAD, …), plus `VCRUNTIME140_1.dll` (SDL_ttf, ImGui, Jolt, …) and `MSVCP140.dll` (Jolt, RakNet, ShaderC, VMA, Ktx, Gli, Slang). Windows doesn't include them and a self-contained publish doesn't bundle them, so the game works on dev machines and fails for a friend with "Unable to load DLL 'SDL3' or one of its dependencies" [RUN: import tables] | Check at start-up and point the player to `vc_redist.x64.exe` (template `Platform/NativeDialog.cs`). App-local DLLs depend on your Visual Studio licence. List it in the player README |
 
 ## Making a build players can use
 
 - **Check for the VC++ runtime at start-up (T41).** Before the first SDL call, `NativeLibrary.TryLoad("vcruntime140.dll", ...)` and `vcruntime140_1.dll`; if either fails, show a dialog with the official download link (`https://aka.ms/vs/17/release/vc_redist.x64.exe`) and exit.
 - **Crash reporting.** The published exe is `WinExe` (no console), so an unhandled exception just closes the window. Catch it in play mode, write a log under `%LOCALAPPDATA%\<Game>\error.log` (the exe's folder may be read-only), and show a **Win32** `MessageBoxW` via `[LibraryImport("user32.dll")]` [RUN]. Don't use `Sdl.PInvoke.ShowSimpleMessageBox` here: if the error is SDL failing to load, SDL's dialog fails too and the game closes silently.
-- **Credits with no text renderer** (raw Vulkan, a GL app without fonts): bake the credits line into the splash image, or render it once with SDL_ttf (`RenderTextBlended`) and draw it as a texture. Recipe 7.31 in `vulkan.md` does the second and is [RUN] (`Sandbox/VulkanSplash`). Repeat it in the player README.
+- **Credits with no text renderer:** recipe 7.31 (`vulkan.md`). Repeat them in the player README.
 - **The VC++ check must cover every runtime DLL your packages import (T41).** The `brutal-sdl` template checks `vcruntime140` and `vcruntime140_1`; add `msvcp140` when you add Jolt, RakNet, ShaderC, VMA, Ktx, Gli or Slang (`brutal-3d` does, for Jolt). Edit `NativeDialog.RequiredVcRuntimeDlls`.
-- **A player README.txt beside the exe:** controls, credits (including the FreeType line), the VC++ runtime requirement (T41), and a SmartScreen note. Unsigned exes trigger "Windows protected your PC"; players click "More info", then "Run anyway". Code signing removes the warning but costs money.
+- **A player README.txt beside the exe:** controls, credits (including the FreeType line), the VC++ runtime requirement (T41), and a SmartScreen note for unsigned exes ("More info", then "Run anyway").
 - **One zip** of the publish folder is the easiest thing to send.
 - **Pause on focus loss**, so Alt-Tab doesn't cost a life.
 - The `brutal-sdl` template does all of the above; `Sandbox/check-template.ps1` checks the crash dialog and log, the missing-runtime dialog (`--vcruntime-test`), and every licence file on the published exe.
 
 ## Tooling note: keep files ASCII
 
-Windows PowerShell 5.1 (`powershell.exe`) reads UTF-8 files without a BOM in the ANSI code page. `Get-Content` shows `©` as `Â©`, and `Set-Content` writes the mojibake back plus a BOM. That corrupted a template README once. Keep templates and generated text ASCII (`(c)` rather than `©`, `->` rather than an arrow; `check-template.ps1` enforces it), and edit files with an editor or a UTF-8-aware tool, not a PowerShell 5.1 read/replace/write.
+Windows PowerShell 5.1 reads BOM-less UTF-8 as ANSI, so a read/replace/write turns `©` into `Â©`. Keep templates and generated text ASCII (`(c)`, `->`; `check-template.ps1` enforces it) and edit with a UTF-8-aware tool.
 
 There are no royalties. For logo waivers (non-profit, or where the logo harms the product) or a commercial licence, contact brutal@ahwoo.com.

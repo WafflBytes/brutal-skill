@@ -60,7 +60,7 @@ var s = world.GetSensorEvents();           // BeginEvents/EndEvents with SensorS
 | ID | Trap | Fix |
 |---|---|---|
 | T23 | `Box2D.cs:11-16` loads `box2dd` under `#if DEBUG` | Matters only when building from source |
-| T42 | **Every Box2D event flag defaults to off** in this build: `B2ShapeDef.Default` has `EnableContactEvents`, `EnableHitEvents` and `EnableSensorEvents` all false. Box2D v3.0 defaulted contact events to on, so code written for it silently gets no events. Sensor events need the flag on **both** the sensor and the visitor shape [RUN] | Set the flags in every shape def that should report. `RecipeCheck 7.22` fails if the defaults change |
+| T42 | **Every Box2D event flag defaults to off** in this build: `B2ShapeDef.Default` has `EnableContactEvents`, `EnableHitEvents` and `EnableSensorEvents` all false. Code written for upstream v3.0 (contact events on) silently gets none. Sensor events need the flag on **both** the sensor and the visitor shape [RUN] | Set the flags in every shape def that should report. `RecipeCheck 7.22` fails if the defaults change |
 
 ## Export gaps
 

@@ -49,10 +49,9 @@ write.Write(MsgPing); write.Write(21);
 peer.Send(write.Written(), PacketPriority.HighPriority, PacketReliability.ReliableOrdered, 0, AddressOrGUID.From(p->Guid), false);
 peer.Shutdown(300);                                   // ms to let the disconnect notification go out
 ```
-- Measured: connecting plus one round trip takes about 90 ms on loopback.
 - A real server binds all interfaces, so Windows Firewall will ask the player the first time [SRC]. Mention it in the player README.
 ### 7.28 RakNet: full servers, failed connects, leaving, crashing [RUN over 127.0.0.1]
-Checked by `RecipeCheck 7.28`.
+Runnable copy: `RecipeCheck 7.28`.
 ```csharp
 server.SetTimeoutTime(4000, SystemAddress.UNASSIGNED_SYSTEM_ADDRESS); // right after Startup, the same on BOTH ends (T44)
 client.SetTimeoutTime(4000, SystemAddress.UNASSIGNED_SYSTEM_ADDRESS);
@@ -71,15 +70,15 @@ Message ids to handle (`p->Data[0]`, as `(byte)DefaultMessageIDTypes.X`):
 | `ConnectionLost` | the other side | the peer vanished (crash, cable): only after its reliable messages time out (T44) |
 
 - `Shutdown(0)` sends no goodbye, so it's a handy way to simulate a crash in tests.
-- `GetAveragePing(AddressOrGUID.From(guid))` returns ms (12 ms on loopback).
+- `GetAveragePing(AddressOrGUID.From(guid))` returns ms.
 - **Testing two players on one PC:** bind with `new SocketDescriptor("127.0.0.1", port)` so Windows Firewall doesn't prompt, run two processes (`--host`, `--join 127.0.0.1`), give each test its own port range, and drive both with bots plus a log. Real players need the default all-interfaces bind.
 - Fast-changing state (positions) can go `PacketReliability.UnreliableSequenced`; scores and events `ReliableOrdered`. Put them on different ordering channels (`orderingChannel` 0, 1, ...) so one doesn't hold up the other [SRC].
 - Don't pause an online game on focus loss: the other player is still playing.
 
 ### 7.33 A host-authoritative online game: protocol, smoothing, two-process test [RUN over 127.0.0.1]
-Runnable copy: `Sandbox/NetSession` (about 600 lines in three files; `NetPeer.cs` is the reusable peer wrapper, `Game.cs` the protocol, a tiny simulation and the two session classes, `Program.cs` the driver). It is distilled from the 2026-10-18 Pong eval, whose complete game is outside the repo.
+Runnable copy: `Sandbox/NetSession` (`NetPeer.cs` the reusable peer wrapper, `Game.cs` the protocol, simulation and sessions, `Program.cs` the two-process test driver).
 - **Layers:** `NetPeer` (one RakNet peer, one remote player, `Poll(listener)` once per fixed step, `Send(bytes, reliable)`, `Close(sayGoodbye)`) under `HostSession`/`ClientSession` (game rules, no RakNet types) under the simulation (`World`, no network types, so it is testable headless and identical on both ends).
-- **Roles:** the host owns the simulation, applies the client's input and sends a **snapshot every tick**; the client sends its **input every tick** and draws. The client never simulates the shared state, so it can't disagree with the host. Both ends run fixed 1/60 s steps (`Poll`, apply, send).
+- **Roles:** the host owns the simulation, applies the client's input and sends a **snapshot every tick**; the client sends its **input every tick** and draws. Both ends run fixed 1/60 s steps (`Poll`, apply, send).
 - **Messages** (ids start at `UserPacketEnum`; payloads are flat `[StructLayout(Sequential, Pack = 1)]` structs written through `NetStream`, as in 7.23):
 
 | Message | Direction | Delivery |
@@ -89,43 +88,41 @@ Runnable copy: `Sandbox/NetSession` (about 600 lines in three files; `NetPeer.cs
 | `State { Tick, ball, paddles }` | host to client, every tick | `UnreliableSequenced`, channel 1 |
 | `Input { Tick, PaddleY }` | client to host, every tick | `UnreliableSequenced`, channel 1 |
 
-  A lost snapshot is replaced by the next one a tick later, so only the handshake needs reliability. `UnreliableSequenced` already drops a packet that arrives after a newer one; still compare `Tick` yourself and ignore anything not newer [RUN: both ends do]. Whether the two channels really keep a reliable message from delaying state wasn't measured [SRC].
-- **Never trust the wire:** `TryRead<T>` rejects short packets and copies to the stack before `NetStream` reads; clamp every received value (`ClampPaddle`, with `float.IsFinite`) before it touches the simulation; check the protocol version in `Hello`, and answer a mismatch with `Reject` then `CloseRemote()` [RUN]. `SetMaximumIncomingConnections(1)` makes a second player get `NoFreeIncomingConnections`, which the client reports as "That host already has an opponent" [RUN].
-- **Client smoothing without hiding the truth:** keep a client clock that adds 1 per frame and is pulled forward to each snapshot's `Tick`, never back. Draw the newest snapshot advanced by `clamp(clock - snapshot.Tick, 0, 8)` steps along its velocity (dead reckoning), clamped to the court. With 1 snapshot in 3 lost, the raw view (hold the last snapshot) stalled on 83 to 94 of about 234 frames and the smoothed view on 0 [RUN, three runs]. **Don't count frames since the last snapshot instead:** a late snapshot is then treated as fresh and lands exactly where the previous frame already drew the ball, a one-frame stall (19 of 236 frames in this tool's first version). The 8-step cap stops the ball running through a wall during a long outage.
-- **Not in the tool, but used by the Pong eval [SRC]:** move the player's own paddle locally with no wait for the host (client-side prediction of the player's own object only) and take every other object from snapshots; keep every event between snapshots (several can arrive in one step) so sounds aren't dropped.
-- **Disconnects** (the host log lines the test checks): a polite `Close()` gives `DisconnectionNotification` (`opponent left: goodbye`); a killed process gives `ConnectionLost` only after the timeout, measured 1515 to 1548 ms with `SetTimeoutTime(1500)` on both ends while the host kept sending state (T44). Use a few seconds in a real game.
-- **The two-process test:** run with no arguments, the tool starts itself with `--host <port>` and `--join <port> [--ticks N] [--drop-every K] [--version V]`. Bots drive the input, each process prints a line per event plus the state of every 10th tick, and the driver reads the lines and checks them: join, input to simulation to snapshot round trip (`echo=ok`), host and client agree on every shared tick, smoothing, `Kill()` as a real crash, version mismatch, a full host. Give each scenario its own port, bind `127.0.0.1` so the firewall stays quiet, and use `ProcessStartInfo.ArgumentList` (it quotes paths with spaces for you). Loopback ping reads 0 ms.
-- **Not covered:** lag compensation, interpolation buffers, more than two players, NAT traversal and relays, encryption, cheating beyond input clamping.
-- A `brutal-net` template doesn't exist; to start a game, copy `NetPeer.cs` and the shape of `Game.cs`.
+  Only the handshake needs reliability. Still compare `Tick` yourself and ignore anything not newer [RUN].
+- **Never trust the wire:** `TryRead<T>` rejects short packets and copies to the stack before `NetStream` reads; clamp every received value (`ClampPaddle`, with `float.IsFinite`) before it touches the simulation; check the protocol version in `Hello`, and answer a mismatch with `Reject` then `CloseRemote()` [RUN]. `SetMaximumIncomingConnections(1)` makes a second player get `NoFreeIncomingConnections` [RUN].
+- **Client smoothing without hiding the truth:** keep a client clock that adds 1 per frame and is pulled forward to each snapshot's `Tick`, never back. Draw the newest snapshot advanced by `clamp(clock - snapshot.Tick, 0, 8)` steps along its velocity (dead reckoning), clamped to the court. With 1 snapshot in 3 lost this gave 0 stalled frames [RUN]. **Don't count frames since the last snapshot instead:** a late snapshot is then treated as fresh and stalls a frame. The 8-step cap stops the ball running through a wall during an outage.
+- Also worth doing (not in the tool): predict only the player's own object locally, and keep every event between snapshots so sounds aren't dropped.
+- **Disconnects** (the host log lines the test checks): a polite `Close()` gives `DisconnectionNotification` (`opponent left: goodbye`); a killed process gives `ConnectionLost` only after the timeout (T44). Use a few seconds in a real game.
+- **The two-process test:** run with no arguments, the tool starts itself with `--host <port>` and `--join <port> [--ticks N] [--drop-every K] [--version V]`. Bots drive the input, each process logs events, and the driver checks the lines. Give each scenario its own port, bind `127.0.0.1` so the firewall stays quiet, and use `ProcessStartInfo.ArgumentList`.
+- Two players only; no NAT traversal or encryption. There's no network template: copy `NetPeer.cs` and the shape of `Game.cs`.
 
 ## Traps
 
 | ID | Trap | Fix |
 |---|---|---|
-| T44 | **A crashed or unplugged peer is noticed only when a reliable message to it can't be delivered.** If you send it nothing reliable, you never get `ConnectionLost`. The timeout defaults to 10 s (30 s in RakNet debug builds), and RakNet requires the same value on both ends [RUN: 1.2 s with a 1.5 s timeout while sending reliable state] | Set `SetTimeoutTime` on both peers right after `Startup`, and keep sending reliable state or a heartbeat |
+| T44 | **A crashed or unplugged peer is noticed only when a reliable message to it can't be delivered.** If you send it nothing reliable, you never get `ConnectionLost`. The timeout defaults to 10 s (30 s in RakNet debug builds), and RakNet requires the same value on both ends [RUN] | Set `SetTimeoutTime` on both peers right after `Startup`, and keep sending reliable state or a heartbeat |
 
 ## NotCurses
 
 ### 7.43 NotCurses in a terminal [RUN on Linux under GNU screen]
-Checked by `RecipeCheck 7.43`: the parent starts a child (`--notcurses-child <file>`) inside `screen -dmS ... -T xterm-256color`, and the child writes its results to the file. On Windows it skips (T55).
+Runnable copy: `RecipeCheck 7.43` (runs the child inside `screen -dmS ... -T xterm-256color`; skipped on Windows, T55).
 ```csharp
 var opts = new NotCursesOptions { Flags = NotCursesOption.SuppressBanners };
 using var nc = NotCursesHandle.Init(opts);                 // InvalidOperationException if init fails cleanly; see T55 for when it doesn't
 var std = nc.StdPlane();
-std.Dim(out var dim);                                      // uint2(x = columns, y = rows): 80x24 under screen
-std.PutStr(new int2(2, 1), "BRUTAL notcurses"u8);          // int2(x, y); returns columns written (16)
+std.Dim(out var dim);                                      // uint2(x = columns, y = rows)
+std.PutStr(new int2(2, 1), "BRUTAL notcurses"u8);          // int2(x, y); returns columns written
 nc.Render();
 var text = std.Contents(new int2(2, 1), new uint2(16, 1)); // reads cells back, also (x, y)
 var key = nc.GetNblock(out NcInput input);                 // 0 = no key waiting
 // Dispose = notcurses_stop: restores the terminal
 ```
-- `NotCurses.Version` is `3.0.17` in package 2026.10.0.
-- Not run: pixel blitting (`NcVisualHandle.FromRgba` + `nc.Blit`), real key input, resize, macOS.
+- Not run: pixel blitting (`NcVisualHandle.FromRgba` + `nc.Blit`), real key input, resize.
 
 ## NativeFileDialog
 
 ### 7.41 Open, save and folder dialogs [RUN on Windows]
-Checked by `RecipeCheck 7.41`: a helper thread finds the dialog window, types a path into its file-name box and presses OK, or closes it.
+Runnable copy: `RecipeCheck 7.41`.
 ```csharp
 NativeFileDialog.Initialize();                                  // NFD_Init on this thread; call Shutdown() when done
 var filters = new[] { new FilterItem { Name = "Images", Spec = "png,jpg" } };
@@ -135,15 +132,15 @@ var save = NativeFileDialog.OpenDialog(new SaveFileDialogInfo { FilterList = fil
 var folder = NativeFileDialog.OpenDialog(new FolderDialogInfo { DefaultPath = dir }, out r);   // every kind is an OpenDialog overload
 ```
 - The field is `FilterList` (not `Filters`); `Spec` is comma-separated extensions without dots. An empty `Name` or `Spec` throws `ArgumentException` before any dialog opens.
-- The dialogs are modal on the calling thread, and the save dialog creates nothing on disk. They worked on an STA thread and on an MTA thread alike (the console default), so `[STAThread]` isn't needed.
+- The dialogs are modal on the calling thread, and the save dialog creates nothing on disk. `[STAThread]` isn't needed [RUN].
 - `Initialize()` discards `NFD_Init`'s result and the error API is internal, so a failure shows only as `Result.Error` later.
-- Not run: the multiple-selection overloads, Linux (GTK) and macOS.
+- Not run: multiple selection, Linux (GTK), macOS.
 
 ## Traps and bugs (NotCurses, NativeFileDialog)
 
 | ID | Trap | Fix |
 |---|---|---|
-| T55 | **NotCurses needs a terminal that answers its queries, or `Init` blocks or crashes.** Windows: init blocked forever in a classic console window and in a ConPTY terminal, which echoed the replies as text [RUN]. With output redirected (no terminal) the process died with heap corruption (`0xC0000374`), not the `InvalidOperationException` the wrapper promises [RUN]. Linux: tmux 3.6 hangs it (its device-attributes reply hits "unexpected transition"); GNU screen 4.09 works; with stdout redirected it still opens `/dev/tty`, so a background job is stopped by job control [RUN, WSL2] | Treat NotCurses as Linux-only and test in the terminals you target. Never call `Init` without a terminal. Run it in a child process if a hang must not take the app down |
+| T55 | **NotCurses needs a terminal that answers its queries, or `Init` blocks or crashes.** Windows: blocks forever in console and ConPTY terminals; with no terminal it dies with heap corruption (`0xC0000374`), not `InvalidOperationException`. Linux: tmux 3.6 hangs it, GNU screen works; with stdout redirected it still opens `/dev/tty` [RUN] | Treat NotCurses as Linux-only and test in the terminals you target. Never call `Init` without a terminal. Run it in a child process if a hang must not take the app down |
 
 | ID | Where (under `BRUTAL/`) | Bug | Workaround |
 |---|---|---|---|
