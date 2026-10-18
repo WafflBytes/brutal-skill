@@ -210,6 +210,8 @@ var joy = Sdl.Gamepad.GetGamepadJoystick(pad);          // borrowed: don't close
 Sdl.Joystick.SetJoystickVirtualAxis(joy, (int)SdlGamepadAxis.Leftx, -32768);
 Sdl.Joystick.SetJoystickVirtualButton(joy, (int)SdlGamepadButton.South, true);
 Sdl.Gamepad.UpdateGamepads();                           // or PollEvent; then read the pad as above
+// With a window open but not focused (hidden test window, game in the background) SDL ignores pad input (T48):
+Sdl.PInvoke.SetHint(Sdl.Constants.HintJoystickAllowBackgroundEvents, "1");   // before Sdl.Init, only if you need it
 Sdl.Joystick.DetachVirtualJoystick(id);                 // -> GamepadRemoved
 ```
 Verified: hot-plug add and remove events, axes, buttons, a button event, and `RumbleGamepad` reaching the device's callback.
@@ -225,4 +227,5 @@ Verified: hot-plug add and remove events, axes, buttons, a button event, and `Ru
 | T38 | `SdlMixer.Generate` always fills the whole buffer but returns only the bytes of real audio before trailing silence; it can come back slightly short even while a track is mid-clip | Treat any value ≥ 0 as success. Use `TrackPlaying` to know when a clip ended |
 | T39 | No font ships with Sdl.Ttf, and system fonts (Arial, Segoe UI) generally can't be redistributed | Bundle a font whose licence allows redistribution (e.g. SIL Open Font License) and ship its licence file. Tests can use `BRUTAL_TEST_FONT` or a system font |
 | T40 | `SdlMixer.PlayTrack(track, 0)` resets the track's loop count from its options (default 0), so `SetTrackLoops` called **before** it is silently lost and music plays once | Call `SetTrackLoops(track, -1)` **after** `PlayTrack` (or pass loops in the play options) |
+| T48 | While windows exist but none has keyboard focus (a hidden test window, a game alt-tabbed away), SDL3 drops gamepad and joystick input: `GetGamepadButton` stays false and no button events arrive, with every call succeeding. With no window at all (7.24) input arrives. [RUN] (7.35's hidden window) | For tests or games that must read pads in the background, `Sdl.PInvoke.SetHint(Sdl.Constants.HintJoystickAllowBackgroundEvents, "1")` before `Sdl.Init`. A focused game window needs nothing |
 | T34 | Observed with an Xbox Series X controller: `RumbleGamepadTriggers` returns `false` (no impulse triggers), even with a focused window; `RumbleGamepad` works. Trigger motors depend on the connection path (Bluetooth / XInput lack them) | Check the bool once and fall back to the body motors |

@@ -9,14 +9,33 @@ using Brutal.Numerics;
 using Brutal.OpenGlApi;
 using Brutal.SdlApi;
 
-/// <summary>Feeds SDL3 events and per-frame window state to Dear ImGui. Call ProcessEvent for every SDL event, NewFrame once per frame.</summary>
-sealed class SdlImGuiGlue : IPlatformBackend
+/// <summary>Feeds SDL3 events and per-frame window state to Dear ImGui. Call ProcessEvent for every SDL event, NewFrame once per frame.
+/// Also wires the clipboard, mouse cursor shapes and gamepad navigation (the game opens the pad; SDL only sends button events for open pads).</summary>
+sealed unsafe class SdlImGuiGlue : IPlatformBackend
 {
     readonly SdlWindow _window;
     readonly Stopwatch _clock = Stopwatch.StartNew();
     double _last;
+    // ImGui keeps only the function pointers: the delegates must stay rooted (T35)
+    readonly ImGuiPlatformIO.GetClipboardTextFnDelegate _getClipboard;
+    readonly ImGuiPlatformIO.SetClipboardTextFnDelegate _setClipboard;
+    byte* _clipboardText; // SDL_GetClipboardText allocates; ImGui reads it until the next call, so free the previous one then
+    readonly SdlCursor[] _cursors = new SdlCursor[(int)ImGuiMouseCursor.COUNT]; // created on first use: needs the video subsystem
+    ImGuiMouseCursor _lastCursor = ImGuiMouseCursor.COUNT;
 
-    public SdlImGuiGlue(SdlWindow window) => _window = window;
+    public int ClipboardReads, ClipboardWrites;
+
+    public SdlImGuiGlue(SdlWindow window)
+    {
+        _window = window;
+        var io = ImGui.GetIO();
+        io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
+        _getClipboard = GetClipboardText;
+        _setClipboard = SetClipboardText;
+        var platformIo = ImGui.GetPlatformIO();
+        platformIo.Platform_GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(_getClipboard);
+        platformIo.Platform_SetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(_setClipboard);
+    }
 
     public void NewFrame()
     {
@@ -28,6 +47,101 @@ sealed class SdlImGuiGlue : IPlatformBackend
         var now = _clock.Elapsed.TotalSeconds;
         io.DeltaTime = _last > 0 ? (float)Math.Max(now - _last, 1e-5) : 1f / 60f;
         _last = now;
+        UpdateMouseCursor();
+    }
+
+    byte* GetClipboardText(ImGuiContextPtr ctx)
+    {
+        ClipboardReads++;
+        if (_clipboardText != null)
+            Sdl.PInvoke.Free(_clipboardText);
+        _clipboardText = Sdl.PInvoke.GetClipboardText(); // "" (not null) when empty
+        return _clipboardText;
+    }
+
+    void SetClipboardText(ImGuiContextPtr ctx, byte* text)
+    {
+        ClipboardWrites++;
+        Sdl.PInvoke.SetClipboardText(Marshal.PtrToStringUTF8((nint)text) ?? "");
+    }
+
+    // ImGui computes the wanted cursor during a frame; apply it at the start of the next one. Only on change: SetCursor every frame flickers on some systems.
+    void UpdateMouseCursor()
+    {
+        var io = ImGui.GetIO();
+        if ((io.ConfigFlags & ImGuiConfigFlags.NoMouseCursorChange) != 0)
+            return;
+        var wanted = io.MouseDrawCursor ? ImGuiMouseCursor.None : ImGui.GetMouseCursor();
+        if (wanted == _lastCursor)
+            return;
+        _lastCursor = wanted;
+        if (wanted == ImGuiMouseCursor.None)
+        {
+            Sdl.Mouse.HideCursor();
+            return;
+        }
+        Sdl.Mouse.SetCursor(CursorFor(wanted));
+        Sdl.Mouse.ShowCursor();
+    }
+
+    public SdlCursor CursorFor(ImGuiMouseCursor c)
+    {
+        ref var slot = ref _cursors[(int)c];
+        if (slot.IsNull())
+            slot = Sdl.Mouse.CreateSystemCursor(c switch
+            {
+                ImGuiMouseCursor.TextInput => SdlSystemCursor.Text,
+                ImGuiMouseCursor.ResizeAll => SdlSystemCursor.Move,
+                ImGuiMouseCursor.ResizeNS => SdlSystemCursor.NsResize,
+                ImGuiMouseCursor.ResizeEW => SdlSystemCursor.EwResize,
+                ImGuiMouseCursor.ResizeNESW => SdlSystemCursor.NeswResize,
+                ImGuiMouseCursor.ResizeNWSE => SdlSystemCursor.NwseResize,
+                ImGuiMouseCursor.Hand => SdlSystemCursor.Pointer,
+                ImGuiMouseCursor.Wait => SdlSystemCursor.Wait,
+                ImGuiMouseCursor.Progress => SdlSystemCursor.Progress,
+                ImGuiMouseCursor.NotAllowed => SdlSystemCursor.NotAllowed,
+                _ => SdlSystemCursor.Default,
+            });
+        return slot;
+    }
+
+    static ImGuiKey MapGamepadButton(SdlGamepadButton b) => b switch
+    {
+        SdlGamepadButton.Start => ImGuiKey.GamepadStart,
+        SdlGamepadButton.Back => ImGuiKey.GamepadBack,
+        SdlGamepadButton.West => ImGuiKey.GamepadFaceLeft, // Xbox X, PS Square
+        SdlGamepadButton.East => ImGuiKey.GamepadFaceRight, // Xbox B, PS Circle
+        SdlGamepadButton.North => ImGuiKey.GamepadFaceUp, // Xbox Y, PS Triangle
+        SdlGamepadButton.South => ImGuiKey.GamepadFaceDown, // Xbox A, PS Cross: activate
+        SdlGamepadButton.DpadLeft => ImGuiKey.GamepadDpadLeft,
+        SdlGamepadButton.DpadRight => ImGuiKey.GamepadDpadRight,
+        SdlGamepadButton.DpadUp => ImGuiKey.GamepadDpadUp,
+        SdlGamepadButton.DpadDown => ImGuiKey.GamepadDpadDown,
+        SdlGamepadButton.LeftShoulder => ImGuiKey.GamepadL1,
+        SdlGamepadButton.RightShoulder => ImGuiKey.GamepadR1,
+        SdlGamepadButton.LeftStick => ImGuiKey.GamepadL3,
+        SdlGamepadButton.RightStick => ImGuiKey.GamepadR3,
+        _ => ImGuiKey.None,
+    };
+
+    // SDL axes: sticks -32768..32767 (up is negative Y), triggers 0..32767. Each stick axis feeds two ImGui keys.
+    static void AddGamepadAxis(ImGuiIOPtr io, SdlGamepadAxis axis, short value)
+    {
+        const float dead = 8000;
+        void Analog(ImGuiKey key, float v0, float v1)
+        {
+            var v = Math.Clamp((value - v0) / (v1 - v0), 0f, 1f);
+            io.AddKeyAnalogEvent(key, v > 0.1f, v);
+        }
+        switch (axis)
+        {
+            case SdlGamepadAxis.Leftx: Analog(ImGuiKey.GamepadLStickLeft, -dead, -32768); Analog(ImGuiKey.GamepadLStickRight, dead, 32767); break;
+            case SdlGamepadAxis.Lefty: Analog(ImGuiKey.GamepadLStickUp, -dead, -32768); Analog(ImGuiKey.GamepadLStickDown, dead, 32767); break;
+            case SdlGamepadAxis.Rightx: Analog(ImGuiKey.GamepadRStickLeft, -dead, -32768); Analog(ImGuiKey.GamepadRStickRight, dead, 32767); break;
+            case SdlGamepadAxis.Righty: Analog(ImGuiKey.GamepadRStickUp, -dead, -32768); Analog(ImGuiKey.GamepadRStickDown, dead, 32767); break;
+            case SdlGamepadAxis.LeftTrigger: Analog(ImGuiKey.GamepadL2, 0, 32767); break;
+            case SdlGamepadAxis.RightTrigger: Analog(ImGuiKey.GamepadR2, 0, 32767); break;
+        }
     }
 
     public unsafe void ProcessEvent(in SdlEvent ev)
@@ -56,6 +170,12 @@ sealed class SdlImGuiGlue : IPlatformBackend
                     io.AddInputCharacter((uint)rune.Value);
                 break;
             case SdlEventType.KeyDown or SdlEventType.KeyUp:
+                // Shortcuts (Ctrl+C/V/A/Z) read ImGuiKey.Mod_*: ImGui does not derive them from LeftCtrl etc., so send SDL's mod bits first
+                var mod = (uint)ev.key.mod;
+                io.AddKeyEvent(ImGuiKey.Mod_Ctrl, (mod & Sdl.Constants.KmodCtrl) != 0);
+                io.AddKeyEvent(ImGuiKey.Mod_Shift, (mod & Sdl.Constants.KmodShift) != 0);
+                io.AddKeyEvent(ImGuiKey.Mod_Alt, (mod & Sdl.Constants.KmodAlt) != 0);
+                io.AddKeyEvent(ImGuiKey.Mod_Super, (mod & Sdl.Constants.KmodGui) != 0);
                 io.AddKeyEvent(MapKey(ev.key.scancode), ev.type == SdlEventType.KeyDown);
                 break;
             case SdlEventType.WindowFocusGained:
@@ -67,10 +187,37 @@ sealed class SdlImGuiGlue : IPlatformBackend
             case SdlEventType.WindowMouseLeave:
                 io.AddMousePosEvent(-float.MaxValue, -float.MaxValue);
                 break;
+            case SdlEventType.GamepadAdded:
+                io.BackendFlags |= ImGuiBackendFlags.HasGamepad; // ImGui navigates with a pad only with this and ConfigFlags.NavEnableGamepad
+                break;
+            case SdlEventType.GamepadRemoved:
+                if (!Sdl.Gamepad.HasGamepad())
+                    io.BackendFlags &= ~ImGuiBackendFlags.HasGamepad;
+                break;
+            case SdlEventType.GamepadButtonDown or SdlEventType.GamepadButtonUp:
+                var key = MapGamepadButton((SdlGamepadButton)ev.gbutton.button);
+                if (key != ImGuiKey.None)
+                    io.AddKeyEvent(key, ev.type == SdlEventType.GamepadButtonDown);
+                break;
+            case SdlEventType.GamepadAxisMotion:
+                AddGamepadAxis(io, (SdlGamepadAxis)ev.gaxis.axis, ev.gaxis.value);
+                break;
         }
     }
 
-    public void Dispose() { }
+    public void Dispose()
+    {
+        var platformIo = ImGui.GetPlatformIO();
+        platformIo.Platform_GetClipboardTextFn = 0;
+        platformIo.Platform_SetClipboardTextFn = 0;
+        if (_clipboardText != null)
+            Sdl.PInvoke.Free(_clipboardText);
+        _clipboardText = null;
+        foreach (var c in _cursors)
+            if (!c.IsNull())
+                Sdl.Mouse.DestroyCursor(c);
+        Array.Clear(_cursors);
+    }
 
     // By scancode (physical key): shortcuts follow the key position, not the layout (on AZERTY, Ctrl+Q is the A key).
     public static ImGuiKey MapKey(SdlScancode s)
@@ -155,7 +302,9 @@ static unsafe partial class Recipes
         Check(SdlImGuiGlue.MapKey(SdlScancode.Kp3) == ImGuiKey.Keypad3, "Kp3");
         Check(SdlImGuiGlue.MapKey(SdlScancode.Unknown) == ImGuiKey.None, "Unknown -> None");
 
-        Sdl.Init.Initialize(SdlInitFlags.Video | SdlInitFlags.Events);
+        // SDL drops gamepad presses while windows exist but none has focus; this window is hidden (a real, focused game window doesn't need it)
+        Sdl.PInvoke.SetHint(Sdl.Constants.HintJoystickAllowBackgroundEvents, "1");
+        Sdl.Init.Initialize(SdlInitFlags.Video | SdlInitFlags.Events | SdlInitFlags.Gamepad);
         SdlWindow window = default!;
         var made = false;
         nint context = 0;
@@ -178,6 +327,7 @@ static unsafe partial class Recipes
             var io = ImGui.GetIO();
             io.IniFilename = default;
             ImGui.StyleColorsDark();
+            var builtInClipboard = ImGui.GetPlatformIO().Platform_GetClipboardTextFn != 0; // ImGui's own Win32 clipboard, before the glue replaces it
             var platform = new SdlImGuiGlue(window);
             var renderer = new OpenGlBackend();
             try
@@ -192,6 +342,8 @@ static unsafe partial class Recipes
                 bool captureMouseOverUi = false, captureMouseElsewhere = true, wantText = false, wantKeysWhileTyping = false, wantKeysAfter = true;
                 var vertices = 0;
                 var frame = 0;
+                ImDrawCallback? pendingCallback = null;
+                var navFocus = "";
 
                 void Push(SdlEvent e) => Sdl.Events.PushEvent(&e);
                 void Move(float2 p)
@@ -212,11 +364,15 @@ static unsafe partial class Recipes
                     e.button.y = p.Y;
                     Push(e);
                 }
+                ushort mods = 0; // what SDL would put in ev.key.mod
                 void Key(SdlScancode sc, bool down)
                 {
+                    if (sc == SdlScancode.Lctrl)
+                        mods = (ushort)(down ? mods | Sdl.Constants.KmodLctrl : mods & ~Sdl.Constants.KmodLctrl);
                     var e = new SdlEvent();
                     e.key.type = down ? SdlEventType.KeyDown : SdlEventType.KeyUp;
                     e.key.scancode = sc;
+                    e.key.mod = mods;
                     e.key.down = (byte)(down ? 1 : 0);
                     Push(e);
                 }
@@ -236,14 +392,20 @@ static unsafe partial class Recipes
                     ImGui.Text($"Frame {frame}");
                     if (ImGui.Button("Click me"u8, new float2(120, 30)))
                         clicked++;
+                    navFocus = ImGui.IsItemFocused() ? "button" : "";
                     buttonC = (ImGui.GetItemRectMin() + ImGui.GetItemRectMax()) * 0.5f;
                     ImGui.SliderFloat("Volume"u8, ref volume, 0, 1);
+                    if (ImGui.IsItemFocused()) navFocus = "slider";
                     sliderMin = ImGui.GetItemRectMin();
                     sliderMax = ImGui.GetItemRectMax();
                     ImGui.Checkbox("Show grid"u8, ref showGrid);
+                    if (ImGui.IsItemFocused()) navFocus = "checkbox";
                     checkC = ImGui.GetItemRectMin() + new float2(8, 8);
                     ImGui.InputText("Name"u8, input);
+                    if (ImGui.IsItemFocused()) navFocus = "input";
                     inputC = (ImGui.GetItemRectMin() + ImGui.GetItemRectMax()) * 0.5f;
+                    if (pendingCallback != null)
+                        ImGui.GetWindowDrawList().AddCallback(pendingCallback, 42);
                     ImGui.End();
                     ImGui.Render();
 
@@ -317,6 +479,112 @@ static unsafe partial class Recipes
                 Check(typed == "h", $"text \"hi\" then Backspace left \"h\" (got \"{typed}\")");
                 Check(!captureMouseElsewhere, "WantCaptureMouse is false over empty space");
                 Check(!wantKeysAfter, "after clicking away WantCaptureKeyboard is false");
+
+                // Mouse cursor shape: hover the text field, the next NewFrame switches SDL's cursor
+                Move(inputC); Frame(); Frame();
+                var textCursor = Sdl.Mouse.GetCursor().Pointer == platform.CursorFor(ImGuiMouseCursor.TextInput).Pointer;
+                Move(empty); Frame(); Frame();
+                var arrowCursor = Sdl.Mouse.GetCursor().Pointer == platform.CursorFor(ImGuiMouseCursor.Arrow).Pointer;
+                Check(textCursor, "over the text field SDL's cursor is the I-beam (SDL_SYSTEM_CURSOR_TEXT)");
+                Check(arrowCursor, "over empty space it is back to the arrow");
+
+                // Clipboard both ways, then Ctrl+A, Ctrl+V into the text field. The user's clipboard is restored afterwards.
+                var savedPtr = Sdl.PInvoke.GetClipboardText();
+                var savedClipboard = Marshal.PtrToStringUTF8((nint)savedPtr) ?? "";
+                Sdl.PInvoke.Free(savedPtr);
+                string toSdl, toImGui, pasted;
+                try
+                {
+                    ImGui.SetClipboardText("from ImGui 7.35");
+                    var p = Sdl.PInvoke.GetClipboardText();
+                    toSdl = Marshal.PtrToStringUTF8((nint)p) ?? "";
+                    Sdl.PInvoke.Free(p);
+                    Sdl.PInvoke.SetClipboardText("from SDL");
+                    toImGui = ImGui.GetClipboardText().ToString();
+                    Click(inputC);
+                    Key(SdlScancode.Lctrl, true); Key(SdlScancode.A, true); Frame(); Key(SdlScancode.A, false); Frame();
+                    Key(SdlScancode.V, true); Frame(); Key(SdlScancode.V, false); Key(SdlScancode.Lctrl, false); Frame();
+                    pasted = System.Text.Encoding.UTF8.GetString(input.Buffer, 0, input.Length);
+                    Click(empty);
+                }
+                finally
+                {
+                    Sdl.PInvoke.SetClipboardText(savedClipboard);
+                }
+                Console.WriteLine($"     clipboard: ImGui built-in handler before the glue {builtInClipboard}; glue reads {platform.ClipboardReads}, writes {platform.ClipboardWrites}");
+                if (OperatingSystem.IsWindows())
+                    Check(builtInClipboard, "on Windows ImGui already has an OS clipboard handler (the glue's only matters elsewhere)");
+                Check(platform.ClipboardWrites == 1 && platform.ClipboardReads >= 2, "the glue's clipboard functions were the ones called");
+                Check(toSdl == "from ImGui 7.35", $"ImGui.SetClipboardText reached SDL's clipboard (got \"{toSdl}\")");
+                Check(toImGui == "from SDL", $"ImGui.GetClipboardText read SDL's clipboard (got \"{toImGui}\")");
+                Check(pasted == "from SDL", $"Ctrl+A, Ctrl+V pasted into InputText (got \"{pasted}\")");
+
+                // Gamepad navigation with a virtual pad (as in 7.24): D-pad moves, South (Xbox A) activates
+                var padName = "RecipeCheck ImGui Pad\0"u8;
+                uint padId;
+                fixed (byte* pName = padName)
+                {
+                    var desc = new SdlVirtualJoystickDesc
+                    {
+                        version = (uint)sizeof(SdlVirtualJoystickDesc),
+                        type = (ushort)SdlJoystickType.Gamepad,
+                        naxes = (ushort)SdlGamepadAxis.Count,
+                        nbuttons = 15,
+                        name = pName,
+                    };
+                    padId = Sdl.Joystick.AttachVirtualJoystick(&desc);
+                }
+                Check(padId != 0, "virtual pad attached");
+                var pad = Sdl.Gamepad.OpenGamepad(padId); // SDL sends button events only for open pads
+                try
+                {
+                    var joy = Sdl.Gamepad.GetGamepadJoystick(pad);
+                    io.ConfigFlags |= ImGuiConfigFlags.NavEnableGamepad;
+                    Frame(); // GamepadAdded reaches the glue
+                    var hasGamepad = (io.BackendFlags & ImGuiBackendFlags.HasGamepad) != 0;
+                    void PadButton(SdlGamepadButton b)
+                    {
+                        Sdl.Joystick.SetJoystickVirtualButton(joy, (int)b, true); Frame(); Frame();
+                        Sdl.Joystick.SetJoystickVirtualButton(joy, (int)b, false); Frame(); Frame();
+                    }
+                    Click(new float2(60, 18)); // the title bar: focuses the window without pressing anything
+                    var before = clicked;
+                    var navStart = navFocus; // ImGui restores the window's last nav item: the text field clicked above
+                    PadButton(SdlGamepadButton.DpadUp);
+                    var navAfterUp = navFocus;
+                    var gridBefore = showGrid;
+                    PadButton(SdlGamepadButton.South);
+                    var gridToggled = showGrid != gridBefore;
+                    PadButton(SdlGamepadButton.DpadUp);
+                    PadButton(SdlGamepadButton.DpadUp);
+                    var navAtButton = navFocus;
+                    PadButton(SdlGamepadButton.South);
+                    var padClicks = clicked - before;
+                    Sdl.Joystick.SetJoystickVirtualAxis(joy, (int)SdlGamepadAxis.Lefty, -32768); Frame();
+                    var stickUp = ImGui.IsKeyDown(ImGuiKey.GamepadLStickUp);
+                    Sdl.Joystick.SetJoystickVirtualAxis(joy, (int)SdlGamepadAxis.Lefty, 0); Frame();
+                    var stickReleased = !ImGui.IsKeyDown(ImGuiKey.GamepadLStickUp);
+                    Console.WriteLine($"     gamepad nav: HasGamepad {hasGamepad}, focus {navStart} -> up {navAfterUp} -> up, up {navAtButton}, checkbox toggled {gridToggled}, button {padClicks}x");
+                    Check(hasGamepad, "GamepadAdded set ImGuiBackendFlags.HasGamepad");
+                    Check(navStart == "input" && navAfterUp == "checkbox", $"D-pad up moved nav focus from the text field to the checkbox ({navStart} -> {navAfterUp})");
+                    Check(gridToggled, "South (Xbox A) toggled the focused checkbox");
+                    Check(navAtButton == "button" && padClicks == 1, $"two more D-pad ups reached the button and South pressed it once ({navAtButton}, {padClicks}x)");
+                    Check(stickUp && stickReleased, "left stick up past the dead zone holds GamepadLStickUp; centred releases it");
+                }
+                finally
+                {
+                    Sdl.Gamepad.CloseGamepad(pad);
+                    Sdl.Joystick.DetachVirtualJoystick(padId);
+                }
+
+                // T47: BRUTAL's OpenGlBackend never calls ImDrawList.AddCallback callbacks (its loop has no UserCallback branch)
+                var callbackCalls = 0;
+                ImDrawCallback callback = (list, cmd) => callbackCalls++;
+                pendingCallback = callback;
+                Frame();
+                pendingCallback = null;
+                GC.KeepAlive(callback);
+                Check(callbackCalls == 0, "gap (T47): OpenGlBackend skipped the ImDrawCallback (a fix upstream fails this check)");
             }
             finally
             {

@@ -41,6 +41,9 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T40 | `SdlMixer.PlayTrack` resets the loop count; set loops after it | sdl |
 | T44 | RakNet only notices a vanished peer when a reliable message can't be delivered; set the same `SetTimeoutTime` on both ends | misc |
 | T45 | `Alc.OpenDevice()` throws when there is no active default playback device; `ALSOFT_DRIVERS=null` must be set before the first OpenAL call | audio |
+| T47 | BRUTAL's ImGui `OpenGlBackend` and `VulkanBackend` silently never call `AddCallback` draw callbacks | glfw-imgui |
+| T48 | SDL3 drops gamepad input while windows exist but none is focused (hidden test window, background game); set `HintJoystickAllowBackgroundEvents` | sdl |
+| T49 | A hand-written ImGui platform glue must send `ImGuiKey.Mod_Ctrl/Shift/Alt/Super`; left/right modifier keys alone give no shortcuts | glfw-imgui |
 | T46 | Jolt constraints and characters work, but the casts, motor-settings getters, body locks, default filters and every character contact listener are unexported: create constraints from body IDs, down-cast with `Unsafe.BitCast`, use `XxxFilter.Create()` | physics |
 | T43 | `floatQuat.CreateFromRotationMatrix` silently returns a non-unit quaternion for a mirrored (left-handed) basis | core-libs |
 | T42 | Box2D contact, hit and sensor events are all off by default; sensors need the flag on both shapes | physics |
