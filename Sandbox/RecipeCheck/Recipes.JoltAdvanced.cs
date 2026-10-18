@@ -157,6 +157,102 @@ static unsafe partial class Recipes
                 c.Dispose();
             }
 
+            // ---- hinge limits: from the settings, read back, and changed at run time against a motor ----
+            using (var w = new JoltScene())
+            {
+                var anchor = w.AddBox(new float3(0.2f), pivot, MotionType.Static);
+                var bob = w.AddBox(new float3(0.2f), new float3(2, 10, 0), MotionType.Dynamic); // falls toward a negative angle about +Z
+                using var hs = WorldHinge(pivot);
+                hs.SetLimitsMin(-0.5f);
+                hs.SetLimitsMax(0.5f);
+                var c = w.Bodies.CreateConstraint(hs, anchor, bob);
+                w.Physics.AddConstraint(c);
+                var hinge = AsHinge(c);
+                Check(hinge.HasLimits() && hinge.GetLimitsMin() == -0.5f && hinge.GetLimitsMax() == 0.5f, $"hinge limits: settings limits read back on the constraint (HasLimits {hinge.HasLimits()}, {hinge.GetLimitsMin()}..{hinge.GetLimitsMax()})");
+                var lowest = 0f;
+                for (var i = 0; i < 120; i++)
+                {
+                    w.Run(1);
+                    lowest = Math.Min(lowest, hinge.GetCurrentAngle());
+                }
+                var p = w.Bodies.GetPosition(bob);
+                var rest = hinge.GetCurrentAngle();
+                Console.WriteLine($"     hinge limit [-0.5, 0.5]: lowest angle {lowest:F3} rad, at rest {rest:F3}, bob at {p}");
+                Check(lowest > -0.6f && Math.Abs(rest + 0.5f) < 0.03f && p.Y > 8.9f, "hinge limits: SetLimitsMin/Max stop a falling arm at the limit (a few degrees of overshoot and sag)");
+
+                // A motor set on a sleeping body does nothing until the body is woken.
+                var steps = 0;
+                while (w.Bodies.IsActive(bob) && steps < 600) { w.Run(1); steps++; }
+                Check(!w.Bodies.IsActive(bob), "the arm falls asleep at rest on its limit");
+                var asleep = hinge.GetCurrentAngle();
+                hinge.SetMotorState(MotorState.Velocity);
+                hinge.SetTargetAngularVelocity(2f);
+                w.Run(30);
+                Console.WriteLine($"     asleep after {steps} more steps; motor on, 30 steps: angle {asleep:F3} -> {hinge.GetCurrentAngle():F3}, active {w.Bodies.IsActive(bob)}");
+                Check(Math.Abs(hinge.GetCurrentAngle() - asleep) < 1e-4f, "hinge motor: SetMotorState doesn't wake a sleeping body");
+                w.Bodies.ActivateBody(bob);
+                w.Run(30);
+                Check(hinge.GetCurrentAngle() > asleep + 0.3f, $"hinge motor: ActivateBody starts it (angle {hinge.GetCurrentAngle():F3})");
+                w.Physics.RemoveConstraint(c);
+                c.Dispose();
+            }
+
+            // Limits changed at run time hold against a motor when the body sits on the hinge axis.
+            using (var w = new JoltScene(0f))
+            {
+                var anchor = w.AddBox(new float3(0.2f), new float3(0, 12, 0), MotionType.Static);
+                var wheel = w.AddBox(new float3(0.5f), pivot, MotionType.Dynamic);
+                using var hs = WorldHinge(pivot);
+                var c = w.Bodies.CreateConstraint(hs, anchor, wheel);
+                w.Physics.AddConstraint(c);
+                var hinge = AsHinge(c);
+                Check(!hinge.HasLimits(), "hinge limits: none by default");
+                hinge.SetLimits(-0.3f, 0.8f);
+                hinge.SetMotorState(MotorState.Velocity);
+                hinge.SetTargetAngularVelocity(2f);
+                w.Run(90);
+                Console.WriteLine($"     wheel, SetLimits(-0.3, 0.8) + motor 2 rad/s: angle {hinge.GetCurrentAngle():F3} rad");
+                Check(Math.Abs(hinge.GetCurrentAngle() - 0.8f) < 0.01f, "hinge limits: SetLimits at run time; a velocity motor stops at the upper limit");
+                hinge.SetLimits(-MathF.PI, MathF.PI);
+                Check(!hinge.HasLimits(), "hinge limits: SetLimits(-pi, pi) turns limits off (HasLimits false)");
+                w.Physics.RemoveConstraint(c);
+                c.Dispose();
+            }
+
+            // T51: the motor's default torque limit is float.MaxValue. With the body on a 2 m arm it drives straight
+            // through the limit (inverted check); capping the torque through the constraint's own GetMotorSettings() fixes it.
+            foreach (var cap in new[] { 0f, 1000f })
+            using (var w = new JoltScene(0f))
+            {
+                var anchor = w.AddBox(new float3(0.2f), pivot, MotionType.Static);
+                var bob = w.AddBox(new float3(0.2f), new float3(2, 10, 0), MotionType.Dynamic);
+                using var hs = WorldHinge(pivot);
+                var c = w.Bodies.CreateConstraint(hs, anchor, bob);
+                w.Physics.AddConstraint(c);
+                var hinge = AsHinge(c);
+                hinge.SetLimits(-0.3f, 0.8f);
+                var motor = hinge.GetMotorSettings(); // a live view of the constraint's motor, not a copy
+                if (cap == 0)
+                    Check(motor.GetMaxTorqueLimit() == float.MaxValue, $"T51: default motor torque limit is float.MaxValue ({motor.GetMaxTorqueLimit()})");
+                else
+                    motor.SetTorqueLimit(cap);
+                hinge.SetMotorState(MotorState.Velocity);
+                hinge.SetTargetAngularVelocity(2f);
+                var highest = 0f;
+                for (var i = 0; i < 120; i++)
+                {
+                    w.Run(1);
+                    highest = Math.Max(highest, hinge.GetCurrentAngle());
+                }
+                Console.WriteLine($"     arm, limit 0.8, motor 2 rad/s, torque cap {(cap == 0 ? "none" : cap)}: highest angle {highest:F2} rad");
+                if (cap == 0)
+                    Check(highest > 1.5f, "T51 still present: an uncapped hinge motor drives an arm through its limit");
+                else
+                    Check(hinge.GetMotorSettings().GetMaxTorqueLimit() == cap && highest < 0.9f, "T51 fix: GetMotorSettings().SetTorqueLimit on the constraint keeps the arm at its limit");
+                w.Physics.RemoveConstraint(c);
+                c.Dispose();
+            }
+
             using (var w = new JoltScene())
             {
                 var anchor = w.AddBox(new float3(0.2f), pivot, MotionType.Static);

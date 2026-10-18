@@ -43,6 +43,7 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T45 | `Alc.OpenDevice()` throws when there is no active default playback device; `ALSOFT_DRIVERS=null` must be set before the first OpenAL call | audio |
 | T47 | BRUTAL's ImGui `OpenGlBackend` and `VulkanBackend` silently never call `AddCallback` draw callbacks | glfw-imgui |
 | T48 | SDL3 drops gamepad input while windows exist but none is focused (hidden test window, background game); set `HintJoystickAllowBackgroundEvents` | sdl |
+| T51 | A hinge motor's torque is unlimited by default and drives an arm through its limits; cap it with `GetMotorSettings().SetTorqueLimit` | physics |
 | T50 | Two packages ship the same notice file name (ImGui + ImGui.Backends); a naive licence-copy target makes `dotnet publish` fail with NETSDK1152 | shipping |
 | T49 | A hand-written ImGui platform glue must send `ImGuiKey.Mod_Ctrl/Shift/Alt/Super`; left/right modifier keys alone give no shortcuts | glfw-imgui |
 | T46 | Jolt constraints and characters work, but the casts, motor-settings getters, body locks, default filters and every character contact listener are unexported: create constraints from body IDs, down-cast with `Unsafe.BitCast`, use `XxxFilter.Create()` | physics |
