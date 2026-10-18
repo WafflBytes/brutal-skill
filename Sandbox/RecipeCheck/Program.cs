@@ -18,6 +18,12 @@ using Microsoft.Extensions.Logging;
 // Child process for recipe 7.39 (a Monitor crash has to happen in a process of its own).
 if (args is ["--monitor-child", var childMode, var childRoot])
     return Recipes.MonitorChild(childMode, childRoot);
+// Child process for recipe 7.43 (NotCurses takes over the terminal).
+if (args is ["--notcurses-child", var ncResult])
+    return Recipes.NotCursesChild(ncResult);
+// Child process for recipe 7.40 (bug B12 crashes the process).
+if (args is ["--slang-composite-child"])
+    return Recipes.SlangCompositeChild();
 
 var noWindow = args.Contains("--no-window");
 var noVulkan = args.Contains("--no-vulkan");
@@ -55,6 +61,10 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.37", "Localization: LString, ResX provider, B6", Recipes.LocalizationRecipe),
     ("7.38", "Texture: Basis KTX2 (T32), DDS, LoadFromMemory", Recipes.TextureRecipe),
     ("7.39", "Monitor: log file, crash dump, crash tail (T29)", Recipes.MonitorRecipe),
+    ("7.40", "Slang: compute shader to SPIR-V, diagnostics", Recipes.SlangRecipe),
+    ("7.41", "NativeFileDialog: open, save, folder (Win32-driven)", noWindow ? () => throw new SkipException("--no-window") : Recipes.NativeFileDialogRecipe),
+    ("7.42", "RenderDoc not installed: opt-in, load failure, latch", Recipes.RenderDocRecipe),
+    ("7.43", "NotCurses in a terminal (GNU screen, Linux)", Recipes.NotCursesRecipe),
 };
 
 var failed = 0;
@@ -76,6 +86,7 @@ foreach (var (id, name, run) in recipes)
     {
         failed++;
         Console.WriteLine($"FAIL {id,-5} {name}: {e.GetType().Name}: {e.Message}");
+        if (Environment.GetEnvironmentVariable("RECIPECHECK_STACK") == "1") Console.WriteLine(e.StackTrace);
     }
 }
 Console.WriteLine(failed == 0 ? "All recipes passed." : $"{failed} recipe(s) failed.");

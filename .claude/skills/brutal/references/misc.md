@@ -11,7 +11,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | Package | Namespace | Native (win-x64) | H | Gen | Notes |
 |---|---|---|---|---|---|
 | RakNet | `Brutal.RakNetApi` | RakNetDLL.dll (4.081) | **yes** | Gen+Manual | One peer API for client and server; `Stream` serializer |
-| NotCurses | `Brutal.NotCursesApi` | notcurses-core/-ffi, ncursesw, unistring, winpthread | terminal | Gen | Terminal UI incl. pixel blitters; Windows support is experimental |
+| NotCurses | `Brutal.NotCursesApi` | notcurses-core/-ffi, ncursesw, unistring, winpthread | terminal | Gen | Terminal UI incl. pixel blitters; Linux only in practice (T55) |
 | NativeFileDialog | `Brutal.NativeFileDialogApi` | nfd.dll | no | Hand | |
 
 ## RakNet
@@ -106,16 +106,47 @@ Runnable copy: `Sandbox/NetSession` (about 600 lines in three files; `NetPeer.cs
 
 ## NotCurses
 
-**NotCurses** [SRC]:
-- Text: `NotCursesHandle.Init(opts)`, `nc.StdPlane()`, `plane.PutStr(new int2(x, y), "text"u8)` (takes `RefString8`), `nc.Render()`.
-- Input: `nc.GetNblock(out NcInput)`.
-- Pixels: `NcVisualHandle.FromRgba(span, rows, cols)` + `nc.Blit(visual, new NcVisualOptions { Blitter = ... })`.
+### 7.43 NotCurses in a terminal [RUN on Linux under GNU screen]
+Checked by `RecipeCheck 7.43`: the parent starts a child (`--notcurses-child <file>`) inside `screen -dmS ... -T xterm-256color`, and the child writes its results to the file. On Windows it skips (T55).
+```csharp
+var opts = new NotCursesOptions { Flags = NotCursesOption.SuppressBanners };
+using var nc = NotCursesHandle.Init(opts);                 // InvalidOperationException if init fails cleanly; see T55 for when it doesn't
+var std = nc.StdPlane();
+std.Dim(out var dim);                                      // uint2(x = columns, y = rows): 80x24 under screen
+std.PutStr(new int2(2, 1), "BRUTAL notcurses"u8);          // int2(x, y); returns columns written (16)
+nc.Render();
+var text = std.Contents(new int2(2, 1), new uint2(16, 1)); // reads cells back, also (x, y)
+var key = nc.GetNblock(out NcInput input);                 // 0 = no key waiting
+// Dispose = notcurses_stop: restores the terminal
+```
+- `NotCurses.Version` is `3.0.17` in package 2026.10.0.
+- Not run: pixel blitting (`NcVisualHandle.FromRgba` + `nc.Blit`), real key input, resize, macOS.
 
 ## NativeFileDialog
 
-**NativeFileDialog** [DOC]. Then check `r == NativeFileDialog.Result.Okay`.
+### 7.41 Open, save and folder dialogs [RUN on Windows]
+Checked by `RecipeCheck 7.41`: a helper thread finds the dialog window, types a path into its file-name box and presses OK, or closes it.
 ```csharp
-var path = NativeFileDialog.OpenDialog(new FileDialogInfo { Filters = [new FilterItem { Name = "Images", Spec = "png,jpg" }] }, out var r);
+NativeFileDialog.Initialize();                                  // NFD_Init on this thread; call Shutdown() when done
+var filters = new[] { new FilterItem { Name = "Images", Spec = "png,jpg" } };
+var path = NativeFileDialog.OpenDialog(new FileDialogInfo { FilterList = filters, DefaultPath = dir }, out var r);
+if (r == NativeFileDialog.Result.Okay) { /* full path */ }       // Cancel or Error: ""
+var save = NativeFileDialog.OpenDialog(new SaveFileDialogInfo { FilterList = filters, DefaultPath = dir, DefaultName = "save1.png" }, out r);
+var folder = NativeFileDialog.OpenDialog(new FolderDialogInfo { DefaultPath = dir }, out r);   // every kind is an OpenDialog overload
 ```
+- The field is `FilterList` (not `Filters`); `Spec` is comma-separated extensions without dots. An empty `Name` or `Spec` throws `ArgumentException` before any dialog opens.
+- The dialogs are modal on the calling thread, and the save dialog creates nothing on disk. They worked on an STA thread and on an MTA thread alike (the console default), so `[STAThread]` isn't needed.
+- `Initialize()` discards `NFD_Init`'s result and the error API is internal, so a failure shows only as `Result.Error` later.
+- Not run: the multiple-selection overloads, Linux (GTK) and macOS.
+
+## Traps and bugs (NotCurses, NativeFileDialog)
+
+| ID | Trap | Fix |
+|---|---|---|
+| T55 | **NotCurses needs a terminal that answers its queries, or `Init` blocks or crashes.** Windows: init blocked forever in a classic console window and in a ConPTY terminal, which echoed the replies as text [RUN]. With output redirected (no terminal) the process died with heap corruption (`0xC0000374`), not the `InvalidOperationException` the wrapper promises [RUN]. Linux: tmux 3.6 hangs it (its device-attributes reply hits "unexpected transition"); GNU screen 4.09 works; with stdout redirected it still opens `/dev/tty`, so a background job is stopped by job control [RUN, WSL2] | Treat NotCurses as Linux-only and test in the terminals you target. Never call `Init` without a terminal. Run it in a child process if a hang must not take the app down |
+
+| ID | Where (under `BRUTAL/`) | Bug | Workaround |
+|---|---|---|---|
+| B13 | `Brutal.NativeFileDialog/NativeFileDialog.cs:84` (and the other four `// TODO`s), `:99`, `:315` | `ParentWindow` in every `*DialogInfo` is ignored (`// TODO`: the native handle is always empty), so a dialog isn't owned by your window. The single-file open and save paths never call `NFD_FreePathU8`, so each Okay leaks the path string [SRC] | Accept an unowned dialog. The leak is a few hundred bytes per dialog |
 
 glTF loading is in `assets.md` (7.25, [RUN]).

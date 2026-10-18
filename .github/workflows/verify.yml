@@ -83,6 +83,9 @@ jobs:
           git -C BRUTAL checkout -q $commit
           git -C BRUTAL log --oneline -1
 
+      - name: Install GNU screen (a terminal for the NotCurses recipe 7.43)
+        run: sudo apt-get install -y -q screen
+
       - name: Build Sandbox (linux-x64)
         id: build
         run: dotnet build Sandbox/Sandbox.slnx -c Release -nologo -v quiet

@@ -14,7 +14,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | Vulkan.Abstractions | `Brutal.VulkanApi.Abstractions` | — | — | Hand | `DeviceEx`, `BufferEx`, `ImageEx`, `MappedMemory`, `StagingPool`, `Presets`, `VertexInput.For<T>()`, pipeline/fence/submit helpers. **No swapchain helper** |
 | Vulkan.Vma | `Brutal.VulkanApi.Vma` | vma.dll | — | Gen | VMA |
 | ShaderC | `Brutal.ShaderCApi` | shaderc_shared, SPIRV-Tools-shared | **yes** | Gen+Hand | GLSL/HLSL → SPIR-V on the CPU |
-| Slang | `Brutal.SlangApi` | slang*.dll ×4 | yes | Gen | Outputs SPIR-V and source text (T28) |
+| Slang | `Brutal.SlangApi` | slang*.dll ×4 | yes | Gen | Outputs SPIR-V and source text (T28); 7.40, B11, B12 |
 
 ## Name translation
 
@@ -190,12 +190,26 @@ A raw Vulkan app has no text renderer, but licence 2.1 and 2.2 need the credits 
 5. **Checked by pixel:** the quad sits where the letterbox says, the white logo has more than 800 bright pixels, the credits band has more than 150 lit pixels, the gap between them stays black, and fade 0.5 gives 0.50 of the brightness. When a check counts "lit" pixels, count only inside the quad: the clear colour outside it can pass a low threshold (this bit the first run of the tool).
 6. A full Vulkan game template (`brutal-vulkan`) doesn't exist yet; the eval's complete app is outside the repo.
 
-### Slang
-
-**Slang** [DOC]: legacy compile-request API. `CreateCompileRequest()`, `SetCodeGenTarget(CompileTarget.Spirv)`, then `AddTranslationUnit`, `AddTranslationUnitSourceString`, `AddEntryPoint`, `Compile`.
+### 7.40 Slang: shader source to SPIR-V [RUN]
+Checked by `RecipeCheck 7.40` (`Sandbox/RecipeCheck/Recipes.Slang.cs`) on Windows and Linux. Two binding bugs shape it: on Windows every `ISlangBlob` reads as empty (B11), and the composite helper crashes (B12).
 ```csharp
-Slang.CreateGlobalSession(Constants.ApiVersion, out var s);
+var global = Slang.CreateGlobalSession();                         // throws SlangException; Try* forms return Result
+ProfileID profile;
+fixed (byte* p = "spirv_1_5"u8) profile = global.FindProfile(p);  // byte* APIs: u8 literals end in a hidden NUL
+var target = new TargetDesc { StructureSize = (ByteSize64)sizeof(TargetDesc), Format = CompileTarget.Spirv, Profile = profile };
+var desc = new SessionDesc { StructureSize = (ByteSize64)sizeof(SessionDesc), Targets = &target, TargetCount = 1 }; // no constructor sets StructureSize
+global.CreateSession(ref desc, out var session).ThrowIfFailure();
+var module = session.LoadModuleFromSourceString("doubler", "doubler.slang", source, out var diag); // null + diagnostics on a compile error
+IEntryPoint entry;
+fixed (byte* n = "main"u8) module!.FindEntryPointByName(n, out entry).ThrowIfFailure();  // needs [shader("compute")] etc.
+entry.Link(out var linked, out _).ThrowIfFailure();               // link the entry point alone; it pulls in its module (not the composite, B12)
+linked.GetEntryPointCode(0, 0, out var code, out _).ThrowIfFailure();
+ReadOnlySpan<byte> spirv = BlobBytes(code);                       // NOT code.AsSpan() on Windows (B11); BlobBytes is in the recipe
 ```
+- `BlobBytes` reads the blob through its vtable: `ComWrappers.TryGetComInstance(blob, out var unk)`, `Marshal.QueryInterface` for `typeof(ISlangBlob).GUID`, then slots 3 (`getBufferPointer`) and 4 (`getBufferSize`) as `delegate* unmanaged[MemberFunction]`. Use it for diagnostics blobs too, or they read as empty on Windows.
+- Measured: a 64-thread compute shader gave 764 bytes of SPIR-V 1.5 (magic `0x07230203`, version word `0x00010500`); a syntax error gave a null module and `error[E20001]: unexpected token` naming the file.
+- COM objects have no `Dispose`; the GC releases them.
+- Not run: the legacy compile-request API (`CreateCompileRequest`), reflection, other targets (T28), loading the SPIR-V into Vulkan (7.12 does that with ShaderC output).
 
 ## Traps
 
@@ -206,5 +220,10 @@ Slang.CreateGlobalSession(Constants.ApiVersion, out var s);
 | T4 | Every failing `VkResult` **throws `VkResultError`** (`.Result`), including `ErrorOutOfDateKHR` from acquire/present (`VkDeviceExtensions.gen.cs:8361`). The ImGui backend's checks for it are dead code, so a resize crashes (B7) | `catch (VkResultError e) when (e.Result == VkResult.ErrorOutOfDateKHR) { RecreateSwapchain(); }` |
 | T5 | The Vulkan loader is `vulkan-1.dll` from **System32 only** (`ImportResolver.cs:21`). Touching any `Vulkan.*` static (even `Vulkan.Log`) runs that loader; on failure you get `TypeInitializationException`. The packaged `VulkanEx.dll` isn't the loader | Install the Vulkan runtime. Keep Vulkan types off code paths that must run without it |
 | T28 | Slang: no CPU/host-callable, LLVM or WGSL→SPIR-V targets; DXIL/Metal lib/PTX need your own toolchains | SPIR-V or source text |
+
+| ID | Where (under `BRUTAL/`) | Bug | Workaround |
+|---|---|---|---|
+| B11 | `Brutal.Slang/Generated/Interfaces.gen.cs:46` (`ISlangBlob.GetBufferSize` returns `ByteSize64`) | **Windows: every `ISlangBlob` reads as 0 bytes**, so `AsSpan()` is empty for SPIR-V and diagnostics alike, with success results. MSVC member functions return a struct through a hidden pointer; Slang returns `size_t` in RAX. Linux (System V ABI) reads the right size [RUN: 0 vs 764 bytes, 7.40] | Read the size through the vtable (`BlobBytes` in 7.40) |
+| B12 | `Brutal.Slang/ISessionExtensions.cs:34` + `Slang.GetComInstance` | `CreateCompositeComponentType(span, ...)` kills the process (access violation on Windows, SIGSEGV on Linux): `GetComInstance` calls `GetOrCreateComInterfaceForObject`, which hands Slang a new managed COM wrapper instead of its own object [RUN: child process, 7.40] | Link the entry point alone, or pass native pointers from `ComWrappers.TryGetComInstance` + `QueryInterface` to the interface method |
 
 Also B7 (`glfw-imgui.md`): the ImGui Vulkan backend's out-of-date checks never run.

@@ -25,6 +25,10 @@
     <PackageReference Include="Ahwoo.BRUTAL.Localization" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Texture" Version="2026.10.2" />
     <PackageReference Include="Ahwoo.BRUTAL.Monitor.Host" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Slang" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.NativeFileDialog" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.RenderDoc" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.NotCurses" Version="2026.10.0" />
   </ItemGroup>
   <!-- The licence-copy target from references/shipping.md (checked for OpenAL by T30). -->
   <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">

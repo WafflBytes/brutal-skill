@@ -2,13 +2,14 @@
 
 One line per known trap (`T#`) and confirmed framework bug (`B#`). The full entry, with its fix, is in the reference file named in the last column. Traps that apply to every library (T8, T10, T12, T13, T14, T16, T17) are in full in `SKILL.md`.
 
-Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T54, B11).
+Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T56, B14).
 
 ## By symptom
 
 | Symptom | Look at |
 |---|---|
 | `EntryPointNotFoundException` | T6, T36, T46; search `export-gaps-detail.txt` for the entry point |
+| `NullReferenceException` from a RenderDoc call | T54 |
 | "Unable to load DLL ... or one of its dependencies", often only on another PC | T41 (VC++ runtime), T5 (Vulkan loader), T9 (GLFW), T21 (FMOD) |
 | BRUTALCORE0009/0010 build error, 0011 warning | T13, T14 |
 | A type or member from a README or from memory doesn't exist | T7, T8, T11, T12, T27; then the lookup protocol in `SKILL.md` |
@@ -24,6 +25,9 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | `dotnet publish` fails with NETSDK1152 | T50 |
 | The published exe writes no crash dumps | T52 |
 | No crash-tail log after a crash on Linux | T53 |
+| Slang reports success but the SPIR-V or diagnostics are empty | B11 |
+| The process dies (0xC0000005, 0xC0000374, SIGSEGV) inside a binding call | B12, T55, T17 |
+| The program hangs at start-up with no CPU use | T55 |
 | The process dies from an exception in a job | B5 |
 | ImGui shortcuts or draw callbacks don't work | T49, T47 |
 | Numerics results differ from System.Numerics, or a quaternion is wrong | T19, T43 |
@@ -79,6 +83,8 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | T51 | A hinge motor's torque is unlimited by default and drives an arm through its limits; cap it with `GetMotorSettings().SetTorqueLimit` | jolt |
 | T52 | A single-file publish bundles `Brutal.Monitor.Subprocess.exe`, so Monitor silently writes no crash dumps; mark it `ExcludeFromSingleFile` | shipping |
 | T53 | Linux: a worker-thread crash leaves no Monitor `abnormal-exit.log`; the next run recovers the ring as `previous-crash.log` | core-libs |
+| T54 | Every RenderDoc call throws `NullReferenceException` when RenderDoc isn't loaded; check `IsAvailable` first | glfw-imgui |
+| T55 | NotCurses `Init` blocks (Windows consoles, tmux) or crashes (no terminal) unless the terminal answers its queries | misc |
 | B1 | `PtrOwner.Reset(new)` leaks the old memory | core-libs |
 | B2 | `NativeList.Insert(ByteSize, byte)` never grows the size | core-libs |
 | B3 | Explicit `INativeList.Capacity` gets/sets the size | core-libs |
@@ -89,3 +95,6 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | B8 | `NativeList<T>.GetEnumerator` allocates | core-libs |
 | B9 | `Mem` doesn't track memory, despite the conventions doc | core-libs |
 | B10 | `TextureLoader.LoadFromMemory` never transcodes Basis KTX2 (throws, leaks the handle) | assets |
+| B11 | Windows: every Slang `ISlangBlob` reads as 0 bytes (`GetBufferSize` struct return) | vulkan |
+| B12 | Slang `CreateCompositeComponentType` helper crashes the process | vulkan |
+| B13 | NativeFileDialog ignores `ParentWindow`; open and save leak the path | misc |
