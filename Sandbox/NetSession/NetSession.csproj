@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Runs skill recipe 7.33 (host-authoritative online game over RakNet: input/snapshot protocol, client smoothing,
+       and a two-process bot test). Spawns itself as host and client processes on 127.0.0.1; no window, no display.
+       Exit code = number of failed checks. -->
+  <ItemGroup>
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.RakNet" Version="2026.10.2" />
+  </ItemGroup>
+</Project>

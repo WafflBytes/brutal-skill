@@ -76,6 +76,28 @@ Message ids to handle (`p->Data[0]`, as `(byte)DefaultMessageIDTypes.X`):
 - Fast-changing state (positions) can go `PacketReliability.UnreliableSequenced`; scores and events `ReliableOrdered`. Put them on different ordering channels (`orderingChannel` 0, 1, ...) so one doesn't hold up the other [SRC].
 - Don't pause an online game on focus loss: the other player is still playing.
 
+### 7.33 A host-authoritative online game: protocol, smoothing, two-process test [RUN over 127.0.0.1]
+Runnable copy: `Sandbox/NetSession` (about 600 lines in three files; `NetPeer.cs` is the reusable peer wrapper, `Game.cs` the protocol, a tiny simulation and the two session classes, `Program.cs` the driver). It is distilled from the 2026-10-18 Pong eval, whose complete game is outside the repo.
+- **Layers:** `NetPeer` (one RakNet peer, one remote player, `Poll(listener)` once per fixed step, `Send(bytes, reliable)`, `Close(sayGoodbye)`) under `HostSession`/`ClientSession` (game rules, no RakNet types) under the simulation (`World`, no network types, so it is testable headless and identical on both ends).
+- **Roles:** the host owns the simulation, applies the client's input and sends a **snapshot every tick**; the client sends its **input every tick** and draws. The client never simulates the shared state, so it can't disagree with the host. Both ends run fixed 1/60 s steps (`Poll`, apply, send).
+- **Messages** (ids start at `UserPacketEnum`; payloads are flat `[StructLayout(Sequential, Pack = 1)]` structs written through `NetStream`, as in 7.23):
+
+| Message | Direction | Delivery |
+|---|---|---|
+| `Hello { Version }` (sent on `ConnectionRequestAccepted`) | client to host | `ReliableOrdered`, channel 0 |
+| `Welcome` / `Reject { HostVersion }` | host to client | `ReliableOrdered`, channel 0 |
+| `State { Tick, ball, paddles }` | host to client, every tick | `UnreliableSequenced`, channel 1 |
+| `Input { Tick, PaddleY }` | client to host, every tick | `UnreliableSequenced`, channel 1 |
+
+  A lost snapshot is replaced by the next one a tick later, so only the handshake needs reliability. `UnreliableSequenced` already drops a packet that arrives after a newer one; still compare `Tick` yourself and ignore anything not newer [RUN: both ends do]. Whether the two channels really keep a reliable message from delaying state wasn't measured [SRC].
+- **Never trust the wire:** `TryRead<T>` rejects short packets and copies to the stack before `NetStream` reads; clamp every received value (`ClampPaddle`, with `float.IsFinite`) before it touches the simulation; check the protocol version in `Hello`, and answer a mismatch with `Reject` then `CloseRemote()` [RUN]. `SetMaximumIncomingConnections(1)` makes a second player get `NoFreeIncomingConnections`, which the client reports as "That host already has an opponent" [RUN].
+- **Client smoothing without hiding the truth:** keep a client clock that adds 1 per frame and is pulled forward to each snapshot's `Tick`, never back. Draw the newest snapshot advanced by `clamp(clock - snapshot.Tick, 0, 8)` steps along its velocity (dead reckoning), clamped to the court. With 1 snapshot in 3 lost, the raw view (hold the last snapshot) stalled on 83 to 94 of about 234 frames and the smoothed view on 0 [RUN, three runs]. **Don't count frames since the last snapshot instead:** a late snapshot is then treated as fresh and lands exactly where the previous frame already drew the ball, a one-frame stall (19 of 236 frames in this tool's first version). The 8-step cap stops the ball running through a wall during a long outage.
+- **Not in the tool, but used by the Pong eval [SRC]:** move the player's own paddle locally with no wait for the host (client-side prediction of the player's own object only) and take every other object from snapshots; keep every event between snapshots (several can arrive in one step) so sounds aren't dropped.
+- **Disconnects** (the host log lines the test checks): a polite `Close()` gives `DisconnectionNotification` (`opponent left: goodbye`); a killed process gives `ConnectionLost` only after the timeout, measured 1515 to 1548 ms with `SetTimeoutTime(1500)` on both ends while the host kept sending state (T44). Use a few seconds in a real game.
+- **The two-process test:** run with no arguments, the tool starts itself with `--host <port>` and `--join <port> [--ticks N] [--drop-every K] [--version V]`. Bots drive the input, each process prints a line per event plus the state of every 10th tick, and the driver reads the lines and checks them: join, input to simulation to snapshot round trip (`echo=ok`), host and client agree on every shared tick, smoothing, `Kill()` as a real crash, version mismatch, a full host. Give each scenario its own port, bind `127.0.0.1` so the firewall stays quiet, and use `ProcessStartInfo.ArgumentList` (it quotes paths with spaces for you). Loopback ping reads 0 ms.
+- **Not covered:** lag compensation, interpolation buffers, more than two players, NAT traversal and relays, encryption, cheating beyond input clamping.
+- A `brutal-net` template doesn't exist; to start a game, copy `NetPeer.cs` and the shape of `Game.cs`.
+
 ## Traps
 
 | ID | Trap | Fix |

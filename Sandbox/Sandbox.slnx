@@ -4,6 +4,7 @@
   <Project Path="VulkanDepth/VulkanDepth.csproj" />
   <Project Path="VulkanTexture/VulkanTexture.csproj" />
   <Project Path="VulkanSplash/VulkanSplash.csproj" />
+  <Project Path="NetSession/NetSession.csproj" />
   <Project Path="VulkanWindow/VulkanWindow.csproj" />
   <Project Path="ExportAudit/ExportAudit.csproj" />
   <Project Path="AnalyzerDump/AnalyzerDump.csproj" />

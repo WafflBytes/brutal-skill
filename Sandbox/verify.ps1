@@ -62,6 +62,10 @@ if (-not ($NoVulkan -or $NoWindow)) {
 }
 else { Skip 'VulkanWindow' $(if ($NoVulkan) { '-NoVulkan' } else { '-NoWindow' }) }
 
+Write-Host '== NetSession =='
+dotnet run -c Release --no-build --project NetSession | Out-Host
+Report 'NetSession' ($LASTEXITCODE -eq 0) "$LASTEXITCODE check(s) failed (host + client processes: join, loss smoothing, crash, version, full)"
+
 Write-Host '== ExportAudit =='
 $audit = dotnet run -c Release --no-build --project ExportAudit
 $audit | Out-Host
