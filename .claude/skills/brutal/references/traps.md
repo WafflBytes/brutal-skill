@@ -20,7 +20,7 @@ Scan this before calling an API you haven't used yet. New IDs: add the full entr
 | T19 | Numerics ≠ System.Numerics (`Normalize(zero)` throws, masks, no `half`) | core-libs |
 | T20 | `<None Include="Assets\x">` lands in `bin\…\Assets\` | assets |
 | T21 | FMOD ships no native binaries | audio |
-| T22 | ImGui's platform backend is GLFW only | glfw-imgui |
+| T22 | ImGui's shipped platform backend is GLFW only (SDL glue: 7.35) | glfw-imgui |
 | T23 | `Box2D.cs` loads `box2dd` under `#if DEBUG` | physics |
 | T24 | `Platform` throws outside Windows/Linux/macOS | core-libs |
 | T25 | Jolt is "highly experimental"; API changes between versions | physics |

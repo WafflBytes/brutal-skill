@@ -1,6 +1,6 @@
 # GLFW, ImGui, ImPlot, RenderDoc
 
-Read this for GLFW windows and input, Dear ImGui / ImPlot debug UI, or RenderDoc capture. ImGui's platform backend is GLFW only (T22).
+Read this for GLFW windows and input, Dear ImGui / ImPlot debug UI, or RenderDoc capture. BRUTAL ships only a GLFW platform backend for ImGui (T22); SDL games use a small hand-written glue (7.35).
 
 Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is in `SKILL.md`.
 
@@ -92,7 +92,29 @@ renderer.Dispose(); platform.Dispose(); ImGui.DestroyContext(); window.Dispose()
 ```
 - `ImGui.Begin/Button/Checkbox/SliderFloat` take `ref` for in/out values and return `bool`. Pointer types are `*Ptr` structs (`ImGuiIOPtr`, `ImDrawDataPtr`), and their fields are `ref` properties.
 - **Synthetic input for tests** [RUN]: call `io.AddMousePosEvent(x, y)` / `io.AddMouseButtonEvent(0, down)` **after** `platform.NewFrame()` and before `ImGui.NewFrame()`, so the backend's own update can't overwrite it. A click takes two frames: down, then up.
-- **SDL games:** ImGui has no SDL backend here (T22). Use a separate GLFW tool window, or draw debug text with SDL_ttf (`sdl.md` 7.19).
+- **SDL games:** BRUTAL has no SDL platform backend (T22), but a hand-written one works: see 7.35. A separate GLFW tool window or SDL_ttf debug text (`sdl.md` 7.19) are the alternatives.
+
+### 7.35 Dear ImGui on an SDL3 window + OpenGL 4.1 [RUN]
+`IPlatformBackend` is only `NewFrame()` + `Dispose()`, and `OpenGlBackend` (the renderer) has no GLFW dependency: it needs a current GL 4.1+ core context with GLAD loaded, and it uploads ImGui 1.92's font atlas itself. So an SDL game can use ImGui with a small hand-written platform glue. The full class (`SdlImGuiGlue`, about 150 lines including the key table) is in `Sandbox/RecipeCheck/Recipes.ImGuiSdl.cs`; `RecipeCheck -- 7.35` runs it in a hidden SDL window (`RECIPECHECK_SHOTS=<dir>` saves the frame). The window and context are created exactly as in `opengl.md` 7.17 (`SdlWindowFlags.Opengl`, `GLSetAttribute` 4.1 core, `GLCreateContext`, `Glad.Initialize`).
+```csharp
+var platform = new SdlImGuiGlue(window);      // yours
+var renderer = new OpenGlBackend();           // BRUTAL's
+// each frame:
+while (Sdl.Events.PollEvent(out var ev)) { platform.ProcessEvent(in ev); /* then your own handling */ }
+renderer.NewFrame(); platform.NewFrame(); ImGui.NewFrame();
+/* widgets */
+ImGui.Render(); renderer.RenderDrawData(ImGui.GetDrawData()); Sdl.Video.GLSwapWindow(window);
+```
+What the glue does (all [RUN]):
+- `NewFrame`: `io.DisplaySize` = `GetWindowSize`, `io.DisplayFramebufferScale` = pixel size / window size, `io.DeltaTime` from a stopwatch (must be > 0).
+- Mouse: `MouseMotion` -> `AddMousePosEvent(x, y)`; `MouseButtonDown/Up` -> `AddMouseButtonEvent`, **SDL buttons 1/2/3 are left/middle/right but ImGui's 0/1/2 are left/right/middle** (swap 2 and 3); `MouseWheel` -> `AddMouseWheelEvent(x, y)`; `WindowMouseLeave` -> `AddMousePosEvent(-float.MaxValue, -float.MaxValue)`.
+- Keys: `AddKeyEvent(MapKey(ev.key.scancode), down)`. The table maps `SdlScancode` to `ImGuiKey` (`A`..`Z` and `F1`..`F12` are contiguous in both enums, `N1`..`N9` -> `_1`..`_9`, `N0` -> `_0`, `Return` -> `Enter`, `Pageup` -> `PageUp`, `Equals` -> `Equal`, `Grave` -> `GraveAccent`, `Lctrl`/`Lshift`/`Lalt`/`Lgui` -> `LeftCtrl`...`LeftSuper`, `Kp*`/`KpPlus`... -> `Keypad*`). Modifiers need no extra code: ImGui derives Ctrl/Shift/Alt from the left/right key events. Scancode-based means shortcuts follow key position, not layout.
+- Text: `TextInput` -> `AddInputCharacter` per rune of the UTF-8 `ev.text.text`. SDL3 sends text events only while text input is started on the window (`Sdl.Keyboard.StartTextInput(window)` / `StopTextInput`) [SRC]; the recipe feeds the text event directly, so whether real key presses produce `TextInput` without that call was not run. Start it while `io.WantTextInput` is true.
+- Focus: `WindowFocusGained/Lost` -> `AddFocusEvent`.
+- Game input: after the glue, skip your own handling when `io.WantCaptureMouse` (mouse events) or `io.WantCaptureKeyboard` (key and text events). Verified: true over a window and in an active text field, false over empty space and after clicking away.
+Checked by running synthetic SDL events (pushed with `Sdl.Events.PushEvent`) through the glue: a click made `Button` return true once, a click toggled a checkbox, a drag moved a slider, `"hi"` + Backspace left `"h"` in an `InputText`, and the framebuffer read back with 12,994 lit pixels (the frame also looked right). I broke one check on purpose to see it fail, then restored it. `OpenGlBackend`'s constructor sets `RendererHasViewports` and calls `InitMultiViewportSupport`: harmless with `ViewportsEnable` off (the default; viewports would need a platform glue that creates windows, which this one doesn't).
+- **Not run:** clipboard (`Sdl.PInvoke.SetClipboardText` / `GetClipboardText` into `platformIo.Platform_*ClipboardTextFn`), mouse cursor shapes (`SDL_CreateSystemCursor`), gamepad navigation, multi-viewports, high-DPI (the scale maths is the same as GLFW's but only ran at 1.0), an IME, and a real (visible, focused) window with real input.
+- Text pushed with `PushEvent` carries a raw `byte*` that SDL does not own for you; the recipe calls `ProcessEvent` directly for the synthetic text event. Real SDL text events are fine.
 
 ### RenderDoc
 
@@ -103,7 +125,7 @@ renderer.Dispose(); platform.Dispose(); ImGui.DestroyContext(); window.Dispose()
 | ID | Trap | Fix |
 |---|---|---|
 | T9 | A stock `glfw3.dll` fails; `GlfwWindow` binds fork-only functions (`glfwSetScrollDetailCallback`, trackpad) at `Glfw.Window.cs:610-612` | Use the packaged binary |
-| T22 | ImGui's platform backend is **GLFW only** (no SDL). Renderers: Vulkan, or OpenGL 4.1+ core (GLSL 410) | Use GLFW for ImGui apps |
+| T22 | ImGui's **shipped** platform backend is GLFW only (no SDL). Renderers: Vulkan, or OpenGL 4.1+ core (GLSL 410) | Use GLFW, or the hand-written SDL glue of 7.35 with `OpenGlBackend` |
 
 | ID | Where (under `BRUTAL/`) | Bug | Workaround |
 |---|---|---|---|
