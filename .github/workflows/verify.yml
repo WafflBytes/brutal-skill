@@ -91,6 +91,10 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: dotnet run -c Release --no-build --project Sandbox/RecipeCheck -- --no-window --no-vulkan
 
+      - name: NetSession (host + client processes)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: dotnet run -c Release --no-build --project Sandbox/NetSession
+
       - name: AnalyzerDump
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |

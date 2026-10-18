@@ -495,7 +495,7 @@ static unsafe partial class Recipes
                 string toSdl, toImGui, pasted;
                 try
                 {
-                    ImGui.SetClipboardText("from ImGui 7.35");
+                    ImGui.SetClipboardText("from ImGui 7.35"u8);
                     var p = Sdl.PInvoke.GetClipboardText();
                     toSdl = Marshal.PtrToStringUTF8((nint)p) ?? "";
                     Sdl.PInvoke.Free(p);
