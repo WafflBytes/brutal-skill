@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="RecipeCheck/RecipeCheck.csproj" />
   <Project Path="VulkanCompute/VulkanCompute.csproj" />
+  <Project Path="VulkanDepth/VulkanDepth.csproj" />
+  <Project Path="VulkanTexture/VulkanTexture.csproj" />
   <Project Path="VulkanWindow/VulkanWindow.csproj" />
   <Project Path="ExportAudit/ExportAudit.csproj" />
   <Project Path="AnalyzerDump/AnalyzerDump.csproj" />

@@ -1,6 +1,6 @@
 # Runs every Sandbox check (plus the skill lint) and prints a one-line verdict per tool. Exit code = number of failed checks.
 #   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan] [-NoDialog]
-# -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11 and VulkanCompute.
+# -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11, VulkanCompute, VulkanDepth and VulkanTexture.
 # -NoDialog: the template check skips its two message-box checks (CI). Skipped tools print SKIP, never PASS.
 param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoDialog)
 
@@ -33,6 +33,20 @@ if (-not $NoVulkan) {
     Report 'VulkanCompute' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (0 = all values correct)"
 }
 else { Skip 'VulkanCompute' '-NoVulkan' }
+
+if (-not $NoVulkan) {
+    Write-Host '== VulkanDepth =='
+    dotnet run -c Release --no-build --project VulkanDepth | Out-Host
+    Report 'VulkanDepth' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (depth test, indexed draw, push constants, matrices, pixels read back)"
+}
+else { Skip 'VulkanDepth' '-NoVulkan' }
+
+if (-not $NoVulkan) {
+    Write-Host '== VulkanTexture =='
+    dotnet run -c Release --no-build --project VulkanTexture | Out-Host
+    Report 'VulkanTexture' ($LASTEXITCODE -eq 0) "exit $LASTEXITCODE (texture upload, sampler, descriptor set, sRGB vs UNorm)"
+}
+else { Skip 'VulkanTexture' '-NoVulkan' }
 
 if (-not ($NoVulkan -or $NoWindow)) {
     Write-Host '== VulkanWindow =='

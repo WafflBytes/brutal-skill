@@ -63,7 +63,7 @@ What's in it:
 | Self-tests, snapshots, Sandbox tools, upgrading packages | `references/verification.md` |
 | Every known trap and bug, one line each | `references/traps.md` |
 
-Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 and 7.26 `core-libs`, 7.5, 7.6, 7.22 and 7.27 `physics`, 7.7, 7.11–7.13 and 7.29 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16, 7.18–7.20 and 7.24 `sdl`, 7.10 and 7.25 `assets`, 7.14 `shipping`, 7.17 `opengl`, 7.23 and 7.28 `misc`.
+Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus the library namespace. Recipes keep their original numbers so references stay stable: 7.1–7.4 and 7.26 `core-libs`, 7.5, 7.6, 7.22 and 7.27 `physics`, 7.7, 7.11–7.13, 7.29 and 7.30 `vulkan`, 7.8 and 7.21 `glfw-imgui`, 7.9, 7.16, 7.18–7.20 and 7.24 `sdl`, 7.10 and 7.25 `assets`, 7.14 `shipping`, 7.17 `opengl`, 7.23 and 7.28 `misc`.
 
 ## Quick facts
 
