@@ -104,19 +104,36 @@ static partial class Recipes
             Console.WriteLine($"     first-chance child: exit code {first.ExitCode} after {first.Ms} ms; {first.Output.Trim()}");
             Check(first.ExitCode == 0, "a handled exception produced a FirstChance dump");
 
-            // Logging only (no collector), crash on a worker thread: Dispose never runs, so the subprocess sees the host
-            // exit nonzero without a Stop and saves the ring itself as <stem>.<time>.abnormal-exit.log.
+            // Logging only (no collector), crash on a worker thread: Dispose never runs.
             var nodump = RunMonitorChild("crash-nodump", root, 60_000);
             Check(nodump.ExitCode != 0, "the worker-thread crash child died with a nonzero exit code");
-            Check(WaitFor(() => Directory.GetFiles(logs, "rc-nodump.*.abnormal-exit.log").Length == 1, 5000), "the subprocess wrote an abnormal-exit.log");
-            var abnormal = Directory.GetFiles(logs, "rc-nodump.*.abnormal-exit.log")[0];
-            Console.WriteLine($"     worker crash, no collector: exit {nodump.ExitCode} after {nodump.Ms} ms; {string.Join(", ", Directory.GetFiles(logs, "rc-nodump.*").Select(Path.GetFileName))}");
-            Check(Regex.IsMatch(Path.GetFileName(abnormal), @"^rc-nodump\.\d{6}-\d{6}\.\d+\.\d{8}_\d{6}\.abnormal-exit\.log$"), "abnormal-exit.log is named <stem>.<yyyyMMdd_HHmmss>.abnormal-exit.log");
-            Check(File.ReadAllText(abnormal).Contains("last words"), "the abnormal-exit tail holds the last line");
-            Check(Directory.GetFiles(logs, "rc-nodump.*.ring").Length == 0, "the subprocess removed the ring after saving it");
-            using (var m = new Monitor("rc-nodump"))
-                m.AddLogger(new LoggerOptions { LogDirectory = logs });
-            Check(Directory.GetFiles(logs, "rc-nodump.*.previous-crash.log").Length == 0, "so the next run has no previous-crash.log to write");
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows: the subprocess sees the host exit nonzero without a Stop and saves the ring itself as
+                // <stem>.<time>.abnormal-exit.log.
+                Check(WaitFor(() => Directory.GetFiles(logs, "rc-nodump.*.abnormal-exit.log").Length == 1, 5000), "the subprocess wrote an abnormal-exit.log");
+                var abnormal = Directory.GetFiles(logs, "rc-nodump.*.abnormal-exit.log")[0];
+                Console.WriteLine($"     worker crash, no collector: exit {nodump.ExitCode} after {nodump.Ms} ms; {string.Join(", ", Directory.GetFiles(logs, "rc-nodump.*").Select(Path.GetFileName))}");
+                Check(Regex.IsMatch(Path.GetFileName(abnormal), @"^rc-nodump\.\d{6}-\d{6}\.\d+\.\d{8}_\d{6}\.abnormal-exit\.log$"), "abnormal-exit.log is named <stem>.<yyyyMMdd_HHmmss>.abnormal-exit.log");
+                Check(File.ReadAllText(abnormal).Contains("last words"), "the abnormal-exit tail holds the last line");
+                Check(Directory.GetFiles(logs, "rc-nodump.*.ring").Length == 0, "the subprocess removed the ring after saving it");
+                using (var m = new Monitor("rc-nodump"))
+                    m.AddLogger(new LoggerOptions { LogDirectory = logs });
+                Check(Directory.GetFiles(logs, "rc-nodump.*.previous-crash.log").Length == 0, "so the next run has no previous-crash.log to write");
+            }
+            else
+            {
+                // Linux (T53): the subprocess exits with the host and writes no abnormal-exit.log, but the ring survives,
+                // so the next run recovers the tail as previous-crash.log. An upstream fix makes this branch fail.
+                Thread.Sleep(2000);
+                Console.WriteLine($"     worker crash, no collector: exit {nodump.ExitCode} after {nodump.Ms} ms; {string.Join(", ", Directory.GetFiles(logs, "rc-nodump.*").Select(Path.GetFileName))}");
+                Check(Directory.GetFiles(logs, "rc-nodump.*.abnormal-exit.log").Length == 0, "T53 still holds: no abnormal-exit.log on this OS (if this fails, upstream fixed it: update T53)");
+                Check(Directory.GetFiles(logs, "rc-nodump.*.log.ring").Length == 1, "the ring is left behind");
+                using (var m = new Monitor("rc-nodump"))
+                    m.AddLogger(new LoggerOptions { LogDirectory = logs });
+                var prev = Directory.GetFiles(logs, "rc-nodump.*.previous-crash.log");
+                Check(prev.Length == 1 && File.ReadAllText(prev[0]).Contains("last words"), "the next run recovers the tail as previous-crash.log, last line included");
+            }
         }
         finally
         {
