@@ -2,7 +2,7 @@
 
 One line per known trap (`T#`) and confirmed framework bug (`B#`). The full entry, with its fix, is in the reference file named in the last column. Traps that apply to every library (T8, T10, T12, T13, T14, T16, T17) are in full in `SKILL.md`.
 
-Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T58, B14).
+Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T58, B15).
 
 ## By symptom
 
@@ -27,6 +27,7 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | The published exe writes no crash dumps | T52 |
 | No crash-tail log after a crash on Linux | T53 |
 | Slang reports success but the SPIR-V or diagnostics are empty | B11 (Slang older than 2026.10.3) |
+| Slang: `failed to load dynamic library 'slang-glslang'` | B14 (Slang older than 2026.10.3) |
 | The process dies (0xC0000005, 0xC0000374, SIGSEGV) inside a binding call | B12 (Slang 2026.10.1), T55, T17 |
 | The program hangs at start-up with no CPU use | T55 |
 | The process dies from an exception in a job | B5 |
@@ -101,3 +102,4 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | B11 | Slang 2026.10.1, Windows: every `ISlangBlob` reads as 0 bytes. Fixed in 2026.10.3 | vulkan |
 | B12 | Slang 2026.10.1: the `CreateCompositeComponentType` helper crashes the process. Fixed in 2026.10.3 | vulkan |
 | B13 | NativeFileDialog ignores `ParentWindow`; open and save leak the path | misc |
+| B14 | Slang 2026.10.1, Windows, no `RuntimeIdentifier`: can't load `slang-glslang`, so SPIR-V compiles fail. Fixed in 2026.10.3 | vulkan |

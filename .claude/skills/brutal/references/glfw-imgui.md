@@ -11,7 +11,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | Package | Namespace | Native (win-x64) | H | Gen | Notes |
 |---|---|---|---|---|---|
 | Glfw | `Brutal.GlfwApi` | glfw3.dll, **RocketWerkz fork of 3.5.1** (T9) | `Null` platform | Gen+Manual | Window events are C# events |
-| ImGui (+Abstractions/Backends/Extensions/FreeType), ImPlot | `Brutal.ImGuiApi*`, `Brutal.ImPlotApi` | imgui, imgui_freetype, implot | — | Gen (ImGui 1.92.2 docking, ImPlot 0.17) | T22 |
+| ImGui (+Abstractions/Backends/Extensions/FreeType), ImPlot | `Brutal.ImGuiApi*`, `Brutal.ImPlotApi` | imgui, imgui_freetype, implot | — | Gen (ImGui 1.92.2 docking, ImPlot 0.17) | T22. No recipe for ImPlot, FreeType fonts, the in-game console or `ImGuiEx`; upstream's `samples/Hello/HelloImPlot.cs`, `HelloImGuiFreeType.cs`, `HelloImGuiAbstractions.cs`, `HelloImGuiExtensions.cs` and `samples/Demo/DemoImGui.cs` run [RUN: SampleCheck] |
 | RenderDoc (+ImGui) | `Brutal.RenderDocApi` | installed RenderDoc | — | Gen+Manual | `RenderDoc.Initialize(new RenderDoc.InitOptions(args))` loads it only with `--RenderDoc`; 7.42, T54 |
 
 ## Name translation
@@ -119,4 +119,4 @@ if (RenderDoc.IsAvailable) RenderDoc.StartFrameCapture(default, default);  // gu
 
 ## Export gaps
 
-GLFW (16 missing: macOS/X11/Wayland getters), ImPlot (201 `*_internal`), ImGui.Backends (2, harmless): see `export-gaps.md`.
+GLFW (16 missing: macOS/X11/Wayland getters), ImPlot (201 `*_internal`; the public plotting calls in `HelloImPlot.cs` run), ImGui.Backends (2, harmless): see `export-gaps.md`.

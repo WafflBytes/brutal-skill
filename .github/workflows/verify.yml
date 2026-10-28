@@ -42,9 +42,9 @@ jobs:
           git -C BRUTAL log --oneline -1
 
       # Exit code = number of failed checks. Skipped tools and steps print SKIP, never PASS.
-      - name: verify.ps1 -NoWindow -NoVulkan -NoDialog
+      - name: verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog
+        run: powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio
 
       # Not a gate: tries the template steps verify.ps1 skipped above (--smoke, crash and VC++ runtime dialogs)
       # to find out whether the runner's desktop can run them. A failure here only shows as a warning.
@@ -97,6 +97,12 @@ jobs:
       - name: NetSession (host + client processes)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: dotnet run -c Release --no-build --project Sandbox/NetSession
+
+      # Upstream's own samples, at the versions the skill is verified against (headless ones only).
+      - name: SampleCheck -NoWindow -NoVulkan -NoAudio
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: ./Sandbox/SampleCheck.ps1 -NoWindow -NoVulkan -NoAudio
 
       - name: AnalyzerDump
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}

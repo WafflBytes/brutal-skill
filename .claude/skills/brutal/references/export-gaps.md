@@ -8,7 +8,7 @@ Found by `Sandbox/ExportAudit`, which compares each package's P/Invoke imports w
 
 | Package | Imports | Missing | What |
 |---|---|---|---|
-| ImPlot | 571 | 201 | `*_internal` functions |
+| ImPlot | 571 | 201 | `*_internal` functions. The public plotting API runs (`samples/Hello/HelloImPlot.cs`, SampleCheck) |
 | Box2D | 484 | 64 | Inline math helpers (`b2Add`, `b2Dot`, `b2Cross`, `b2Length`, `b2Normalize`, `b2Lerp`, `b2MakeRot`, `b2Rot_*`, `b2TransformPoint`, `b2AABB_*`, `b2Min/Max/Clamp`…). Use Numerics |
 | GLFW | 154 | 16 | macOS/X11/Wayland native getters (expected on Windows) |
 | ImGui.Backends | 11 | 2 | `glfwGetCocoaWindow` (macOS) and `user32!DefWindowProc`: `[LibraryImport]` is exact-spelling, and user32 only exports `DefWindowProcA/W`. Declared in `GlfwBackend.WindowsNative.cs:53` but never called, so harmless |

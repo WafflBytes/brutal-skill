@@ -1,8 +1,9 @@
 # Runs every Sandbox check (plus the skill lint) and prints a one-line verdict per tool. Exit code = number of failed checks.
-#   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan] [-NoDialog]
+#   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan] [-NoDialog] [-NoAudio]
 # -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11, VulkanCompute, VulkanDepth, VulkanTexture and VulkanSplash.
-# -NoDialog: the template check skips its two message-box checks (CI). Skipped tools print SKIP, never PASS.
-param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoDialog)
+# -NoDialog: the template check skips its two message-box checks (CI). -NoAudio: SampleCheck skips the samples that play sound (CI).
+# Skipped tools print SKIP, never PASS. -NoWindow and -NoVulkan also skip those samples.
+param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoDialog, [switch]$NoAudio)
 
 $ErrorActionPreference = 'Continue'
 Set-Location $PSScriptRoot
@@ -65,6 +66,17 @@ else { Skip 'VulkanWindow' $(if ($NoVulkan) { '-NoVulkan' } else { '-NoWindow' }
 Write-Host '== NetSession =='
 dotnet run -c Release --no-build --project NetSession | Out-Host
 Report 'NetSession' ($LASTEXITCODE -eq 0) "$LASTEXITCODE check(s) failed (host + client processes: join, loss smoothing, crash, version, full)"
+
+Write-Host '== SampleCheck =='
+$sampleArgs = @()
+if ($NoWindow) { $sampleArgs += '-NoWindow' }
+if ($NoVulkan) { $sampleArgs += '-NoVulkan' }
+if ($NoAudio) { $sampleArgs += '-NoAudio' }
+$samples = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'SampleCheck.ps1') @sampleArgs
+$samples | Out-Host
+$sampleCode = $LASTEXITCODE
+$counts = ($samples | Select-String '^(PASS|FAIL|SKIP) ' | Group-Object { $_.Matches[0].Groups[1].Value } | ForEach-Object { "$($_.Count) $($_.Name.ToLower())" }) -join ', '
+Report 'SampleCheck' ($sampleCode -eq 0) "BRUTAL/samples at the verified versions: $counts"
 
 Write-Host '== ExportAudit =='
 $audit = dotnet run -c Release --no-build --project ExportAudit

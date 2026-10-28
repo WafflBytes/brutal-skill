@@ -14,6 +14,7 @@ This folder holds the knowledge base and verification tools for building on the 
   - `ExportAudit`: native export gaps.
   - `AnalyzerDump`: lists the analyzer rules.
   - `FixedProbe`: shows which `[Fixed]` patterns compile.
+  - `SampleCheck.ps1`: builds and runs upstream's `BRUTAL/samples` at the verified package versions.
   - `check-template.ps1`: instantiates the template and builds, tests, publishes and runs it.
   - `lint-skill.ps1`: checks trap/bug IDs, the index and file links in the skill.
 - `Templates/brutal-sdl/` (2D) and `Templates/brutal-3d/` (OpenGL + Jolt): the starter game templates (`dotnet new brutal-sdl`, `dotnet new brutal-3d`). They're real projects: build and run them in place, and keep `Sandbox/check-template.ps1 -Template <name>` passing after changes.

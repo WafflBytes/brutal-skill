@@ -12,7 +12,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 |---|---|---|---|---|---|
 | Vulkan | `Brutal.VulkanApi` | **system** `vulkan-1.dll` (T5) | compute | Gen (Vulkan-Headers 1.4.335) | Wrappers `Instance`/`PhysicalDevice`/`Device`/`Queue`/`CommandBuffer` + extension methods |
 | Vulkan.Abstractions | `Brutal.VulkanApi.Abstractions` | — | — | Hand | `DeviceEx`, `BufferEx`, `ImageEx`, `MappedMemory`, `StagingPool`, `Presets`, `VertexInput.For<T>()`, pipeline/fence/submit helpers. **No swapchain helper** |
-| Vulkan.Vma | `Brutal.VulkanApi.Vma` | vma.dll | — | Gen | VMA |
+| Vulkan.Vma | `Brutal.VulkanApi.Vma` | vma.dll | — | Gen | VMA. No recipe here; upstream's `samples/Hello/HelloVulkanVma.cs` (allocator, mapped buffer) and `samples/Demo/DemoVulkan.cs` (vertex buffer, triangle) run [RUN: SampleCheck] |
 | ShaderC | `Brutal.ShaderCApi` | shaderc_shared, SPIRV-Tools-shared | **yes** | Gen+Hand | GLSL/HLSL → SPIR-V on the CPU |
 | Slang | `Brutal.SlangApi` | slang*.dll ×4 (Slang 2026.7) | yes | Gen | Outputs SPIR-V and source text (T28). Release every proxy yourself (T57); 7.40. Use 2026.10.3+ (B11, B12) |
 
@@ -207,7 +207,7 @@ foreach (var o in new object?[] { code, codeDiag, linkDiag, linked, composeDiag,
     Slang.Release(o);                                             // children first; null and repeats are harmless (T57)
 ```
 - Diagnostics blobs read the same way: `Encoding.UTF8.GetString(diag.AsSpan())`.
-- Not run: `CreateCompileRequest` (the request API used by `BRUTAL/samples/Hello/HelloSlang.cs`), reflection, `EntryPointLayout.GetComputeThreadGroupSize()` (new in 2026.10.3) [SRC].
+- The older request API (`CreateCompileRequest`) runs in upstream's `BRUTAL/samples/Hello/HelloSlang.cs` at 2026.10.3 [RUN: SampleCheck]. Not run: reflection, `EntryPointLayout.GetComputeThreadGroupSize()` (new in 2026.10.3) [SRC].
 
 ## Traps
 
@@ -224,5 +224,6 @@ foreach (var o in new object?[] { code, codeDiag, linkDiag, linked, composeDiag,
 |---|---|---|---|
 | B11 | `Brutal.Slang/Generated/Interfaces.gen.cs` (`ISlangBlob.GetBufferSize`) | **Fixed in 2026.10.3.** In 2026.10.1 on Windows every `ISlangBlob` read as 0 bytes (`GetBufferSize` returned the `ByteSize64` struct; struct-return ABI mismatch), so `AsSpan()` was empty for SPIR-V and diagnostics alike [RUN: 7.40] | Use 2026.10.3+. On 2026.10.1, read the size through the vtable (slots 3 and 4, `delegate* unmanaged[MemberFunction]`) |
 | B12 | `Brutal.Slang/ISessionExtensions.cs` (`CreateCompositeComponentType`) + `Slang.GetComInstance` | **Fixed in 2026.10.3.** In 2026.10.1, `CreateCompositeComponentType(span, ...)` killed the process: `GetComInstance` handed Slang a managed wrapper, not its own object [RUN: 7.40] | Use 2026.10.3+. On 2026.10.1, link the entry point alone (`entry.Link`) |
+| B14 | `Brutal.Slang/Slang.cs` (static constructor) | **Fixed in 2026.10.3.** In 2026.10.1 on Windows, a build without a `RuntimeIdentifier` (natives left in `runtimes/win-x64/native/`, as with `dotnet run file.cs`) fails every SPIR-V compile: `failed to load downstream compiler 'spirv-opt'`, `failed to load dynamic library 'slang-glslang'`. Slang loads its companion DLLs by bare name and Windows doesn't search that folder; 2026.10.3 preloads them. Upstream's `samples/Hello/HelloSlang.cs` still pins 2026.10.1 [RUN: SampleCheck -Pinned] | Use 2026.10.3+, or set `RuntimeIdentifier` (the minimal project in `SKILL.md` does) |
 
 Also B7 (`glfw-imgui.md`): the ImGui Vulkan backend's out-of-date checks never run.

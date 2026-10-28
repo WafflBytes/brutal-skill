@@ -19,7 +19,7 @@ The skill lives in BRUTAL home under `.claude/skills/brutal/`. If you're working
 
 ## After a package upgrade
 
-1. `Sandbox/check-upgrades.ps1` (add `-Apply` to bump), then `Sandbox/verify.ps1`.
+1. `Sandbox/check-upgrades.ps1` (add `-Apply` to bump), then `Sandbox/verify.ps1`. Its SampleCheck stage also runs any new upstream sample; one that hangs fails until it's classified in `SampleCheck.ps1`.
 2. Regenerate the export-gap list (FMOD is left out; it ships no native binaries):
    `dotnet run -c Release --project Sandbox/ExportAudit -- --detail`, then rewrite `references/export-gaps-detail.txt` from its output (keep the header, the summary table and every `missing:` line except FMOD's), and update the counts in `export-gaps.md`.
 3. Update the "Verified against" line in `SKILL.md` and add a line to `VERIFICATION-LOG.md`.

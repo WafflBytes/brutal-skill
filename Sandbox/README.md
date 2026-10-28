@@ -6,17 +6,17 @@ The knowledge base is the Claude Code skill in `.claude/skills/brutal/` (`SKILL.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1            # full run (needs a display and a Vulkan GPU)
-powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog   # headless / CI
+powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio   # headless / CI
 ```
 
-The script prints one PASS/FAIL/SKIP line per tool, and its exit code is the number of failures. `-NoDialog` makes `check-template.ps1` skip its two message-box checks (it still checks `error.log`). Anything skipped prints SKIP, never PASS.
+The script prints one PASS/FAIL/SKIP line per tool, and its exit code is the number of failures. `-NoDialog` makes `check-template.ps1` skip its two message-box checks (it still checks `error.log`). `-NoAudio` makes `SampleCheck.ps1` skip the samples that play sound. Anything skipped prints SKIP, never PASS.
 
 ## CI
 
 `.github/workflows/verify.yml` runs on every push and pull request to `main` (and by hand from the Actions tab). Both jobs clone ahwootech/BRUTAL at the commit in `SKILL.md`'s "Verified against" line, so `lint-skill.ps1` checks it.
 
-- **windows** (`windows-latest`): `verify.ps1 -NoWindow -NoVulkan -NoDialog`, failing on a non-zero exit code. Runners have no GPU, and an interactive desktop isn't guaranteed. A non-blocking probe step then runs `check-template.ps1` without flags, to show whether `--smoke` and the dialogs work there.
-- **linux** (`ubuntu-latest`): builds `Sandbox.slnx` for `linux-x64` (the `BrutalRid` environment variable; locally `-p:BrutalRid=linux-x64`), then runs RecipeCheck `--no-window --no-vulkan`, AnalyzerDump, FixedProbe and the skill lint under `pwsh`. Not run there: Vulkan, ExportAudit (it audits the win-x64 DLLs, which the Windows job covers) and `check-template.ps1` (the template is win-x64 only).
+- **windows** (`windows-latest`): `verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio`, failing on a non-zero exit code. Runners have no GPU, and an interactive desktop isn't guaranteed. A non-blocking probe step then runs `check-template.ps1` without flags, to show whether `--smoke` and the dialogs work there.
+- **linux** (`ubuntu-latest`): builds `Sandbox.slnx` for `linux-x64` (the `BrutalRid` environment variable; locally `-p:BrutalRid=linux-x64`), then runs RecipeCheck `--no-window --no-vulkan`, NetSession, the headless samples (`SampleCheck.ps1 -NoWindow -NoVulkan -NoAudio`), AnalyzerDump, FixedProbe and the skill lint under `pwsh`. Not run there: Vulkan, ExportAudit (it audits the win-x64 DLLs, which the Windows job covers) and `check-template.ps1` (the template is win-x64 only).
 
 Nothing in CI covers a display or a GPU: run the full `verify.ps1` on a desktop before a release.
 
@@ -38,6 +38,8 @@ Nothing in CI covers a display or a GPU: run the full `verify.ps1` on a desktop 
 Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
 `check-template.ps1` (also run by `verify.ps1`) runs `dotnet new brutal-sdl` in a throwaway template hive (nothing is installed for you), then builds with warnings as errors, runs `--selftest`, `--snapshot` and `--smoke`, publishes a single-file exe, and runs it from an empty folder. Add `-Keep` to inspect the generated project.
+
+`SampleCheck.ps1` (also run by `verify.ps1`) copies upstream's `BRUTAL/samples/Hello` and `Demo` files to a temp folder, rewrites their `#:package` versions to the ones in `ExportAudit.csproj` (`-Pinned` keeps upstream's), builds each with `dotnet build <file>.cs` and runs it. Headless samples must exit 0 within 120 s. Windowed ones run for 6 s, get a screenshot through `PrintWindow` (it must show at least two colours; saved under `%TEMP%\brutal-samplecheck\screenshots`), then a close request, and must exit 0. `HelloFmod` must throw `DllNotFoundException` (no FMOD natives); `HelloNativeFileDialog` and `HelloNotCurses` are skipped. A new upstream sample runs as headless until it's classified in the script's `$kinds` table. `-Only HelloJolt,DemoVulkan` runs a few.
 
 `lint-skill.ps1` (also run by `verify.ps1`) checks the skill itself: one full entry per trap/bug ID, an index row in `references/traps.md` naming the right file, every reference file linked, the "next free IDs" note in `traps.md`, the export-gap list present, and a size budget for `SKILL.md`.
 

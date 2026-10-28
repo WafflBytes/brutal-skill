@@ -12,7 +12,7 @@ BRUTAL (Ahwoo / RocketWerkz) is a set of C# bindings and helpers for writing gam
 2. Otherwise, take this skill folder's real path and go up three levels (`<home>/.claude/skills/brutal`). If the skill was installed by linking (for example `~/.claude/skills/brutal` as a junction or symlink), resolve the link first: `(Get-Item <skill folder>).Target` in PowerShell, `readlink -f` elsewhere.
 
 What's in it:
-- `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL, the source of all 50 packages (no project files), plus `samples/` (runnable `Hello<Package>.cs` and `Demo*.cs`). Search it; don't edit it. If it's missing: `git clone https://github.com/ahwootech/BRUTAL BRUTAL` in BRUTAL home.
+- `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL, the source of all 50 packages (no project files), plus runnable `samples/`. Search it; don't edit it. If it's missing: `git clone https://github.com/ahwootech/BRUTAL BRUTAL` in BRUTAL home.
 - `Templates/brutal-sdl/`: the starter game template (see "Starting a new game").
 - `Sandbox/`: verification tools. `Sandbox/verify.ps1` runs them all (`references/verification.md`).
 - `%NUGET%` = `%USERPROFILE%\.nuget\packages`.
@@ -165,7 +165,7 @@ Search with your Grep tool (or `rg` from BRUTAL home). Pass the pattern as writt
 Sources, in priority order:
 1. **`BRUTAL/Brutal.<Lib>/`**. `Generated/` holds the bindings; `Manual/` holds hand-written ergonomics. Generated doc comments link to the upstream C header line.
 2. **Package READMEs** (not in git): `%NUGET%\ahwoo.brutal.<name>\<ver>\README.md`. Useful ones: sdl (handle and threading rules, satellite libraries), jolt (init and shutdown order), monitor (options), openal, slang, fmod. Some are stale (T7, T8).
-3. **`BRUTAL/samples/`**: `Hello/Hello<Package>.cs` is upstream's minimal use of a package (`dotnet run <file>.cs`). Treat it as [DOC]: its `#:package` lines pin older versions, and comments can be stale (T57).
+3. **`BRUTAL/samples/`**: `Hello/Hello<Package>.cs` is upstream's minimal use of a package; all run at the verified versions [RUN: SampleCheck]. Their `#:package` lines pin older versions (B14) and comments can be stale (T57).
 4. **`brutal-conventions.md`** inside the Core package (summarised in `references/core-libs.md`).
 5. **The compiled package**: `lib\net10.0\*.dll`, `analyzers\dotnet\cs\`; natives in `ahwoo.brutal.<name>.native\<ver>\runtimes\win-x64\native\`.
 

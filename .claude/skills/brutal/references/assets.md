@@ -11,11 +11,11 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | Package | Namespace | Native (win-x64) | H | Gen | Notes |
 |---|---|---|---|---|---|
 | Stb | `Brutal.StbApi` | stb.dll | **yes** | Hand | `Load`/`LoadFromMemory` → `StbImage8` (dispose; T1). `WritePng/Bmp/Tga/Jpg/Hdr` |
-| Ktx / Gli | `Brutal.KtxApi` / `Brutal.GliApi` | Ktx.dll / gli.dll | yes | Gen / Hand | KTX1/2 + Basis, with the encoder (7.38, T32, B10); DDS |
+| Ktx / Gli | `Brutal.KtxApi` / `Brutal.GliApi` | Ktx.dll / gli.dll | yes | Gen / Hand | KTX1/2 + Basis, with the encoder (7.38, T32, B10); DDS. Also `samples/Hello/HelloKtx.cs`, `HelloGli.cs` (DDS mip chain) [RUN: SampleCheck] |
 | Texture (+Abstractions) | `Brutal.TextureApi*` | — | yes | Hand | `TextureLoader.LoadFromFile` picks the decoder by extension; `TextureFormat` = `VkFormat` values |
-| Gltf | `Brutal.GltfApi` | — | **yes** | Hand+Gen | Pure .NET glTF 2.0/GLB; no Draco decoding |
-| MeshOptimizer | `Brutal.MeshOptimizer` | meshoptimizer.dll | yes | Gen | Thin; native docs apply |
-| Render.Common/Debug/Mesh | `Brutal.Render.Mesh` | — | yes | Hand | `Mesh<TKey>`, `ProcGenMeshLibrary`. Common/Debug: tiny assemblies with no source in the repo |
+| Gltf | `Brutal.GltfApi` | — | **yes** | Hand+Gen | Pure .NET glTF 2.0/GLB; no Draco decoding. 7.25; also `samples/Hello/HelloGltf.cs` (parse, save) and `samples/Demo/DemoGltfViewer.cs` (node transforms, lit) [RUN: SampleCheck] |
+| MeshOptimizer | `Brutal.MeshOptimizer` | meshoptimizer.dll | yes | Gen | Thin; native docs apply. No recipe; `samples/Hello/HelloMeshOptimizer.cs` (vertex-cache reorder) runs [RUN: SampleCheck] |
+| Render.Common/Debug/Mesh | `Brutal.Render.Mesh` | — | yes | Hand | `Mesh<TKey>`, `ProcGenMeshLibrary` (`samples/Hello/HelloRenderMesh.cs`, a sphere [RUN: SampleCheck]). Common/Debug: tiny assemblies with no source in the repo |
 | FreeType / ZLib | — | freetype+png18 / zlib | — | — | Native-only marker packages (no C# API) |
 
 ## Key source locations

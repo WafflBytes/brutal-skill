@@ -12,7 +12,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 | Interop | `Brutal.Interop` | Core | `[InteropHandle]` (source generator), `InteropStringMarshaller` (UTF-8, 256-byte stack buffer) for `[LibraryImport]` |
 | Memory | `Brutal.Memory` | Core | Static `Mem`: thin over `NativeMemory`, **no tracking**. `PtrOwner<T>` (RAII) |
 | Collections | `Brutal.Collections` | Memory | `NativeList`, `NativeList<T>`, `NativeStrideList`: classes owning native memory, must be disposed. Also `NativeStrideSpan`, `ScratchSpan<T>` (`.Experimental`), `Name<T>`/`Namespace<T>` interning |
-| Strings | `Brutal.Strings` | Collections, Memory | `String8`/`RefString8` (UTF-8), `StringBuilder<TChar>`/`ValueStringBuilder<TChar>`, interpolation handlers. Analyzers 0001/0002/0011 |
+| Strings | `Brutal.Strings` | Collections, Memory | `String8`/`RefString8` (UTF-8), `StringBuilder<TChar>`/`ValueStringBuilder<TChar>`, interpolation handlers. Analyzers 0001/0002/0011. `samples/Hello/HelloStrings.cs` [RUN: SampleCheck] |
 | Logging | `Brutal.Logging` | Strings | `LogSystem.Initialize(...)` over M.E.Logging; `LogCategory.Make("X").Info($"...")`. Disabled levels are free |
 | Numerics | `Brutal.Numerics` | Core | HLSL-style `float2..4`, `double2..4`, `int2..4`, `bool2..4`, `float4x4`, `double4x4`, `float3x2`, `floatQuat`/`doubleQuat`, plane, rect, colour. T4-generated. Analyzers 0004–0006 |
 | Maths | `Brutal.Maths` | Numerics | Only `RandomExtensions` (B4) |
