@@ -19,7 +19,7 @@ What's in it:
 
 **Update check (once a session):** in a git clone, run `git -C <home> ls-remote origin main`; if `git -C <home> cat-file -e <hash>^{commit}` fails, a newer skill exists: tell the user and offer `pull --ff-only`. Never pull unasked. Skip if offline.
 
-**Verified against:** `Ahwoo.BRUTAL.*` 2026.10.1–2026.10.5 (Jolt 2026.10.4, Slang 2026.10.3) on .NET 10, with `BRUTAL/` source at commit `7a3b72d`. Windows x64 is fully verified. Linux x64 ran the headless recipes in CI and WSL2 on the previous packages (2026-10-18), but not Vulkan, windowed recipes or the templates; each recipe says where it ran. macOS: nothing run. Last full re-verification: 2026-10-28 (`references/verification.md`).
+**Verified against:** `Ahwoo.BRUTAL.*` 2026.10.1–2026.10.5 (Jolt 2026.10.4, Slang 2026.10.3) on .NET 10, with `BRUTAL/` source at commit `7a3b72d`. Windows x64 is fully verified. Linux x64 runs the headless recipes and samples in CI on these packages (2026-10-28), but not Vulkan, windowed recipes or the templates; each recipe says where it ran. macOS: nothing run. Last full re-verification: 2026-10-28 (`references/verification.md`).
 
 **Markers:** [RUN] = compiled and executed; [SRC] = checked in source, not executed; [DOC] = from a package README, unverified.
 
