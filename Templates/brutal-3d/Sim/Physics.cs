@@ -42,7 +42,7 @@ public static class JoltRuntime
 
 /// <summary>
 /// One Jolt physics system holding the static level and the ball. Owns its layer tables and bodies and frees them
-/// in the order T18 requires. Only primitive shapes, created through XxxShapeSettings (T6, T36).
+/// in the order T18 requires. Only primitive shapes, created through XxxShapeSettings.
 /// </summary>
 public sealed class PhysicsScene : IDisposable
 {

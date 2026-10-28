@@ -51,6 +51,7 @@ var indices = MemoryMarshal.Cast<byte, ushort>(loader.GetAccessorBufferSpan(prim
 - `GetAccessorBufferSpan` doesn't support sparse accessors. For interleaved buffer views it returns `count * stride` bytes, so step by `bufferView.ByteStride`, not by the element size.
 - Node transforms, materials and images: `loader.GltfJson.Nodes`, `.Materials`, `loader.GetOrLoadImage(i)` [SRC]. Axis helpers: `loader.FlipHandedness()`, `SwapYZAxes()`, `Scale(f)` [SRC].
 - Lower level: `GltfUtility.LoadModel("m.glb")` plus `model.LoadBinaryBuffer(0, "m.glb")` [DOC]; `LightData` is nullable. There's no Draco decoding.
+- **Trimming and Native AOT** (Gltf 2026.10.3+): the JSON metadata is source-generated (`GltfJsonContext`), so loading and saving no longer need reflection. Your own extension classes still do: under trimming or AOT, read them with `obj.GetExtension<T>(name, MyJsonContext.Default.T)` (the overload that takes a `JsonTypeInfo<T>`) [SRC: `GltfUtility.cs`, `IExtensionGltfObject.cs`]. The template's single-file publish doesn't trim, so this only matters if you turn trimming on.
 
 ### 7.38 Compressed textures: Basis KTX2 and DDS [RUN]
 Runnable copy: `RecipeCheck 7.38` (headless).

@@ -131,7 +131,7 @@ static unsafe int Run(string pngOut)
     var canvas = ComposeSplash(logoPath, fontPath, Credits, CanvasW, CanvasH, LogoTop, CreditsTop);
 
     using var instance = Vulkan.CreateInstance(
-        new Instance.CreateInfo { AppInfo = new VkApplicationInfo { ApiVersion = (1 << 22) | (3 << 12) }, EnabledExtensions = [], EnabledLayers = [] }
+        new Instance.CreateInfo { AppInfo = new VkApplicationInfo { ApiVersion = VK.API_VERSION_1_3 }, EnabledExtensions = [], EnabledLayers = [] }
     );
     if (instance.PhysicalDevices.Length == 0)
     {

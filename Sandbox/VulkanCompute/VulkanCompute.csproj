@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Runs skill recipe 7.12 (Vulkan compute end to end). Exit code 0 = every value correct. -->
   <ItemGroup>
-    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="2026.10.3" />
   </ItemGroup>
 </Project>

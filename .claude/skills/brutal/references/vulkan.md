@@ -14,7 +14,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 | Vulkan.Abstractions | `Brutal.VulkanApi.Abstractions` | — | — | Hand | `DeviceEx`, `BufferEx`, `ImageEx`, `MappedMemory`, `StagingPool`, `Presets`, `VertexInput.For<T>()`, pipeline/fence/submit helpers. **No swapchain helper** |
 | Vulkan.Vma | `Brutal.VulkanApi.Vma` | vma.dll | — | Gen | VMA |
 | ShaderC | `Brutal.ShaderCApi` | shaderc_shared, SPIRV-Tools-shared | **yes** | Gen+Hand | GLSL/HLSL → SPIR-V on the CPU |
-| Slang | `Brutal.SlangApi` | slang*.dll ×4 | yes | Gen | Outputs SPIR-V and source text (T28); 7.40, B11, B12 |
+| Slang | `Brutal.SlangApi` | slang*.dll ×4 (Slang 2026.7) | yes | Gen | Outputs SPIR-V and source text (T28). Release every proxy yourself (T57); 7.40. Use 2026.10.3+ (B11, B12) |
 
 ## Name translation
 
@@ -23,6 +23,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 - `vkCmdX(cb, …)` → `cb.X(…)`.
 - Two-call enumerations → `x.GetFoo_Count()` + `x.GetFoo_Write(span)`.
 - Instance-level functions are extensions on `Instance`/`PhysicalDevice`; device-level ones on `Device`.
+- `VK_API_VERSION_1_3` → `VK.API_VERSION_1_3`; `VK_MAKE_API_VERSION(0, 1, 3, 0)` → `Vulkan.MakeApiVersion(0, 1, 3, 0)`; also `Vulkan.VersionMajor/Minor/Patch(v)` for a packed version such as `props.ApiVersion` [SRC]. Vulkan 2026.10.3+; the first two [RUN].
 - Generated sources:
   - `BRUTAL/Brutal.Vulkan/Generated/Extensions/VkDeviceExtensions.gen.cs` (26.7k lines), `VkInstanceExtensions.gen.cs`
   - `Generated/Structs/<Name>.gen.cs`, `Generated/Enums/<Name>.gen.cs`
@@ -36,7 +37,7 @@ Column key: **H** = headless (no window or GPU needed); **Gen** = generated bind
 
 | What | File:line |
 |---|---|
-| Vulkan loader | `Brutal.Vulkan/ImportResolver.cs:16-50` |
+| Vulkan loader | `Brutal.Vulkan/ImportResolver.cs` (`LoadVulkanLibrary`) |
 | `Vulkan.CreateInstance`, `Instance` | `Brutal.Vulkan/Manual/Partials/Vulkan.cs:10`, `Manual/Classes/Instance.cs:8` |
 | `Device.GetQueue` | `Brutal.Vulkan/Manual/Classes/Device.cs:94` |
 | `CreateDevice`, `FindQueueFamily` | `Brutal.Vulkan.Abstractions/Extensions/PhysicalDeviceExtensions.cs:7,48` |
@@ -71,7 +72,7 @@ unsafe { var spirv = new ReadOnlySpan<byte>(result.GetBytes(), (int)result.GetLe
 ```csharp
 using var instance = Vulkan.CreateInstance(new Instance.CreateInfo
 {
-    AppInfo = new VkApplicationInfo { ApiVersion = (1 << 22) | (3 << 12) },   // 1.3
+    AppInfo = new VkApplicationInfo { ApiVersion = VK.API_VERSION_1_3 },       // Vulkan 2026.10.3+; before: (1 << 22) | (3 << 12)
     EnabledExtensions = [], EnabledLayers = [],                                // both must be non-null
 });
 foreach (var pd in instance.PhysicalDevices)
@@ -187,24 +188,26 @@ The licence's credits notice and unaltered logo (`shipping.md`) in an app with n
 4. **Sequence:** fade in and out over a couple of seconds before the first scene frame. There's no Vulkan game template.
 
 ### 7.40 Slang: shader source to SPIR-V [RUN]
-Runnable copy: `RecipeCheck 7.40` (`Sandbox/RecipeCheck/Recipes.Slang.cs`), Windows and Linux. Shaped by B11 and B12.
+Runnable copy: `RecipeCheck 7.40` (`Sandbox/RecipeCheck/Recipes.Slang.cs`). Needs `Ahwoo.BRUTAL.Slang` 2026.10.3+ (B11, B12, T57).
 ```csharp
 var global = Slang.CreateGlobalSession();                         // throws SlangException; Try* forms return Result
 ProfileID profile;
 fixed (byte* p = "spirv_1_5"u8) profile = global.FindProfile(p);  // byte* APIs: u8 literals end in a hidden NUL
-var target = new TargetDesc { StructureSize = (ByteSize64)sizeof(TargetDesc), Format = CompileTarget.Spirv, Profile = profile };
-var desc = new SessionDesc { StructureSize = (ByteSize64)sizeof(SessionDesc), Targets = &target, TargetCount = 1 }; // no constructor sets StructureSize
+var target = new TargetDesc { StructureSize = ByteSize.Of<TargetDesc>(), Format = CompileTarget.Spirv, Profile = profile };
+var desc = new SessionDesc { StructureSize = ByteSize.Of<SessionDesc>(), Targets = &target, TargetCount = 1 }; // no constructor sets StructureSize
 global.CreateSession(ref desc, out var session).ThrowIfFailure();
 var module = session.LoadModuleFromSourceString("doubler", "doubler.slang", source, out var diag); // null + diagnostics on a compile error
 IEntryPoint entry;
 fixed (byte* n = "main"u8) module!.FindEntryPointByName(n, out entry).ThrowIfFailure();  // needs [shader("compute")] etc.
-entry.Link(out var linked, out _).ThrowIfFailure();               // link the entry point alone; it pulls in its module (not the composite, B12)
-linked.GetEntryPointCode(0, 0, out var code, out _).ThrowIfFailure();
-ReadOnlySpan<byte> spirv = BlobBytes(code);                       // NOT code.AsSpan() on Windows (B11); BlobBytes is in the recipe
+var program = session.CreateCompositeComponentType([module, entry], out var composeDiag);
+program.Link(out var linked, out var linkDiag).ThrowIfFailure();
+linked.GetEntryPointCode(0, 0, out var code, out var codeDiag).ThrowIfFailure();
+var spirv = code.AsSpan().ToArray();                              // copy: the span dies with the blob
+foreach (var o in new object?[] { code, codeDiag, linkDiag, linked, composeDiag, program, entry, diag, module, session, global })
+    Slang.Release(o);                                             // children first; null and repeats are harmless (T57)
 ```
-- `BlobBytes` reads the blob through its vtable: `ComWrappers.TryGetComInstance(blob, out var unk)`, `Marshal.QueryInterface` for `typeof(ISlangBlob).GUID`, then slots 3 (`getBufferPointer`) and 4 (`getBufferSize`) as `delegate* unmanaged[MemberFunction]`. Use it for diagnostics blobs too, or they read as empty on Windows.
-- COM objects have no `Dispose`; the GC releases them.
-- Not run: `CreateCompileRequest`, reflection.
+- Diagnostics blobs read the same way: `Encoding.UTF8.GetString(diag.AsSpan())`.
+- Not run: `CreateCompileRequest` (the request API used by `BRUTAL/samples/Hello/HelloSlang.cs`), reflection, `EntryPointLayout.GetComputeThreadGroupSize()` (new in 2026.10.3) [SRC].
 
 ## Traps
 
@@ -213,12 +216,13 @@ ReadOnlySpan<byte> spirv = BlobBytes(code);                       // NOT code.As
 | T2 | Vulkan `sType` is set **only** by `new T()`. `default`, `stackalloc` and `new T[n]` leave it 0, causing validation errors or crashes | Always `new VkFoo { … }`; `arr[i] = new VkFoo { … }` |
 | T3 | Vulkan outputs typed `ReadOnlySpan<T>` are still written (`CreateComputePipelines`, `AllocateDescriptorSets`) | Pass a writable span you own (`stackalloc`) |
 | T4 | Every failing `VkResult` **throws `VkResultError`** (`.Result`), including `ErrorOutOfDateKHR` from acquire/present (`VkDeviceExtensions.gen.cs:8361`). The ImGui backend's checks for it are dead code, so a resize crashes (B7) | `catch (VkResultError e) when (e.Result == VkResult.ErrorOutOfDateKHR) { RecreateSwapchain(); }` |
-| T5 | The Vulkan loader is `vulkan-1.dll` from **System32 only** (`ImportResolver.cs:21`). Touching any `Vulkan.*` static (even `Vulkan.Log`) runs that loader; on failure you get `TypeInitializationException`. The packaged `VulkanEx.dll` isn't the loader | Install the Vulkan runtime. Keep Vulkan types off code paths that must run without it |
+| T5 | **Windows:** the Vulkan loader is `vulkan-1.dll` from **System32 only**. Linux tries `libvulkan.so.1`, then `vulkan` (the `-dev` name); macOS tries `libvulkan.1.dylib`, Homebrew `/opt/homebrew/lib`, `/usr/local/lib`, then `VulkanEx` [SRC: `ImportResolver.cs`, Vulkan 2026.10.3]. Touching any `Vulkan.*` static (even `Vulkan.Log`) runs that loader; on failure you get `TypeInitializationException` (wrapping `DllNotFoundException` from 2026.10.3). The packaged `VulkanEx` (in `Ahwoo.BRUTAL.Vulkan.Native`) is BRUTAL's helper library, not the loader | Install the Vulkan runtime (Linux: `libvulkan1` plus a driver; macOS: the Vulkan SDK). Keep Vulkan types off code paths that must run without it |
 | T28 | Slang: no CPU/host-callable, LLVM or WGSL→SPIR-V targets; DXIL/Metal lib/PTX need your own toolchains | SPIR-V or source text |
+| T57 | **Slang proxies are never released by the GC** (2026.10.3+). Every interface the binding returns (sessions, modules, entry points, components, blobs, diagnostics) holds a native reference until `Slang.Release(proxy)`. Forgetting it leaks, and releasing a parent first (session before its modules) breaks the children. 2026.10.1 released them on the finalizer thread, so older docs and `samples/Hello/HelloSlang.cs` say the GC does it [SRC: `Slang.cs`; RUN: 7.40] | `Slang.Release` each proxy once you're done, children first: code and diagnostics blobs, linked and composite components, entry points, modules, session, global session. Copy a blob's `AsSpan()` before releasing it |
 
 | ID | Where (under `BRUTAL/`) | Bug | Workaround |
 |---|---|---|---|
-| B11 | `Brutal.Slang/Generated/Interfaces.gen.cs:46` (`ISlangBlob.GetBufferSize` returns `ByteSize64`) | **Windows: every `ISlangBlob` reads as 0 bytes**, so `AsSpan()` is empty for SPIR-V and diagnostics alike, with success results. (struct-return ABI mismatch); Linux is fine [RUN: 7.40] | Read the size through the vtable (`BlobBytes` in 7.40) |
-| B12 | `Brutal.Slang/ISessionExtensions.cs:34` + `Slang.GetComInstance` | `CreateCompositeComponentType(span, ...)` kills the process (access violation on Windows, SIGSEGV on Linux): `GetComInstance` hands Slang a managed wrapper, not its own object [RUN: 7.40] | Link the entry point alone, or pass native pointers from `ComWrappers.TryGetComInstance` + `QueryInterface` to the interface method |
+| B11 | `Brutal.Slang/Generated/Interfaces.gen.cs` (`ISlangBlob.GetBufferSize`) | **Fixed in 2026.10.3.** In 2026.10.1 on Windows every `ISlangBlob` read as 0 bytes (`GetBufferSize` returned the `ByteSize64` struct; struct-return ABI mismatch), so `AsSpan()` was empty for SPIR-V and diagnostics alike [RUN: 7.40] | Use 2026.10.3+. On 2026.10.1, read the size through the vtable (slots 3 and 4, `delegate* unmanaged[MemberFunction]`) |
+| B12 | `Brutal.Slang/ISessionExtensions.cs` (`CreateCompositeComponentType`) + `Slang.GetComInstance` | **Fixed in 2026.10.3.** In 2026.10.1, `CreateCompositeComponentType(span, ...)` killed the process: `GetComInstance` handed Slang a managed wrapper, not its own object [RUN: 7.40] | Use 2026.10.3+. On 2026.10.1, link the entry point alone (`entry.Link`) |
 
 Also B7 (`glfw-imgui.md`): the ImGui Vulkan backend's out-of-date checks never run.

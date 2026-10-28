@@ -21,9 +21,6 @@ if (args is ["--monitor-child", var childMode, var childRoot])
 // Child process for recipe 7.43 (NotCurses takes over the terminal).
 if (args is ["--notcurses-child", var ncResult])
     return Recipes.NotCursesChild(ncResult);
-// Child process for recipe 7.40 (bug B12 crashes the process).
-if (args is ["--slang-composite-child"])
-    return Recipes.SlangCompositeChild();
 
 var noWindow = args.Contains("--no-window");
 var noVulkan = args.Contains("--no-vulkan");
@@ -37,7 +34,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.4", "Jobs", Recipes.Jobs),
     ("7.5", "Box2D", Recipes.Box2DRecipe),
     ("7.6", "Jolt", Recipes.JoltRecipe),
-    ("T36", "Jolt mesh/hull trap + fallbacks", Recipes.JoltMeshHullTrap),
+    ("7.44", "Jolt mesh, convex hull, height field (T36 fixed in 2026.10.4)", Recipes.JoltMeshHull),
     ("7.7", "ShaderC", Recipes.ShaderCRecipe),
     ("7.8", "GLFW", noWindow ? Recipes.GlfwNullPlatform : Recipes.GlfwWindow),
     ("7.10", "Stb round trip + T1", Recipes.StbRoundTrip),
@@ -231,27 +228,29 @@ static unsafe partial class Recipes
         Check(Math.Abs(p.Y - 0.5f) < 0.1f, $"ball rests on the floor (y={p.Y})");
     }
 
-    // T36 (skill references/jolt.md; ahwootech/BRUTAL issue #13): in Jolt 2026.10.2 the data-taking
-    // MeshShapeSettings / ConvexHullShapeSettings / HeightFieldShapeSettings.Create overloads resolve but the data
-    // never reaches Jolt, and every other overload/setter is unexported. Passes while that holds; fails once it's
-    // fixed upstream, so the skill gets updated. Also checks the static-compound fallback by dropping a ball on it.
-    public static void JoltMeshHullTrap()
+    // Recipe 7.44 (skill references/jolt.md): mesh, convex-hull and height-field shapes. In Jolt 2026.10.2 their data never
+    // reached Jolt (T36, ahwootech/BRUTAL issue #13); 2026.10.4 fixed it. Each shape gets a ball dropped on it, plus the
+    // static-compound route, which still works and suits levels built from boxes.
+    public static void JoltMeshHull()
     {
         Jolt.RegisterDefaultAllocator();
         Factory.Instance = Factory.Create();
         Jolt.RegisterTypes();
         try
         {
-            var meshError = CreateShapeError(MeshFromQuad);
-            var hullError = CreateShapeError(HullFromCube);
-            Console.WriteLine($"     MeshShapeSettings.Create(triangles): {meshError ?? "works"}");
-            Console.WriteLine($"     ConvexHullShapeSettings.Create(points): {hullError ?? "works"}");
+            var meshY = DropBallOnto(MeshFromQuad);
+            Console.WriteLine($"     MeshShapeSettings.Create(triangles): ball rests at y={meshY:F2}");
+            Check(Math.Abs(meshY - 0.5f) < 0.1f, $"a ball rests on a 2-triangle mesh floor (y={meshY})");
 
-            // Height field: 64x64 samples of height 0. Upstream Jolt only needs sampleCount >= blockSize (2).
-            var heightError = CreateShapeError(FlatHeightField);
-            Console.WriteLine($"     HeightFieldShapeSettings.Create(samples, ...): {heightError ?? "works"}");
+            float hullY;
+            using (var hull = HullFromCube())
+                hullY = hull.GetLocalBounds().Max.Y;
+            Console.WriteLine($"     ConvexHullShapeSettings.Create(points): local bounds max y {hullY:F2}");
+            Check(hullY > 0.9f && hullY < 1.1f, $"a convex hull from a cube's 8 corners has its top at y=1 (got {hullY})");
 
-            // Fallback that works: a static compound of boxes (top face at y=0).
+            var heightY = DropBallOnto(FlatHeightField);
+            Console.WriteLine($"     HeightFieldShapeSettings.Create(samples, ...): ball rests at y={heightY:F2}");
+            Check(Math.Abs(heightY - 0.5f) < 0.1f, $"a ball rests on a flat 64x64 height field (y={heightY})");
 
             var compoundY = DropBallOnto(() =>
             {
@@ -262,13 +261,7 @@ static unsafe partial class Recipes
                 return compound.CreateShape();
             });
             Console.WriteLine($"     StaticCompoundShapeSettings (2 boxes): ball rests at y={compoundY:F2} (0.50 = collides)");
-
-            Check(Math.Abs(compoundY - 0.5f) < 0.1f, $"ball rests on the compound fallback (y={compoundY})");
-            if (meshError == null || hullError == null || heightError == null)
-                throw new InvalidOperationException(
-                    "T36 no longer reproduces: mesh, hull or height-field creation works. Fixed upstream? "
-                        + "Update references/jolt.md and this check."
-                );
+            Check(Math.Abs(compoundY - 0.5f) < 0.1f, $"ball rests on the static compound (y={compoundY})");
         }
         finally
         {
@@ -315,20 +308,6 @@ static unsafe partial class Recipes
         }
     }
 
-    static string? CreateShapeError(Func<Shape> createShape)
-    {
-        try
-        {
-            createShape().Dispose();
-            return null;
-        }
-        catch (Exception e)
-        {
-            return $"{e.GetType().Name}: {e.Message.Split('\n')[0]}";
-        }
-    }
-
-    // Drops a 0.5 m sphere from y=5 onto a static body with the given shape; returns where it ends up.
     static float DropBallOnto(Func<Shape> createShape)
     {
         using var groundShape = createShape();
@@ -463,7 +442,7 @@ static unsafe partial class Recipes
         using var instance = Vulkan.CreateInstance(
             new Instance.CreateInfo
             {
-                AppInfo = new VkApplicationInfo { ApiVersion = (1 << 22) | (3 << 12) },
+                AppInfo = new VkApplicationInfo { ApiVersion = VK.API_VERSION_1_3 },
                 EnabledExtensions = [],
                 EnabledLayers = [],
             }

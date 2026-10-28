@@ -1,59 +1,87 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     ExportAudit (skill: references/export-gaps.md): compares every Ahwoo.BRUTAL.* package's P/Invoke imports with the exports of its
-    win-x64 native DLLs. PackageDownload puts all 50 packages in the NuGet cache without referencing them.
+    win-x64 native DLLs. PackageDownload puts all 50 packages (and their .Native companions) in the NuGet cache without referencing them.
     After an upgrade, bump these versions (dotnet package search Ahwoo.BRUTAL take 100) and re-run.
   -->
   <ItemGroup>
-    <PackageDownload Include="Ahwoo.BRUTAL.Box2D" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Collections" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Concurrency" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Core" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Fmod" Version="[2026.10.3]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.FreeType" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Glfw" Version="[2026.10.4]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Gli" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Gltf" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ImGui" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Abstractions" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Backends" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Extensions" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.FreeType" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ImPlot" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Interop" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Jolt" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Ktx" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Localization" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Logging" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Maths" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Memory" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.MeshOptimizer" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Monitor.Common" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Monitor.Host" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.NativeFileDialog" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.NotCurses" Version="[2026.10.0]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Numerics" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.OpenAl" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.OpenGl" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.RakNet" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Render.Common" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Render.Debug" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Render.Mesh" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.RenderDoc" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.RenderDoc.ImGui" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Sdl" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Image" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ShaderC" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Slang" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Stb" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Strings" Version="[2026.10.1]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Texture" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Texture.Abstractions" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan.Vma" Version="[2026.10.2]" />
-    <PackageDownload Include="Ahwoo.BRUTAL.ZLib" Version="[2026.10.1]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Box2D" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Collections" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Concurrency" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Core" Version="[2026.10.4]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Fmod" Version="[2026.10.4]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.FreeType" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Glfw" Version="[2026.10.5]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Gli" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Gltf" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Abstractions" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Backends" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Extensions" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.FreeType" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImPlot" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Interop" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Jolt" Version="[2026.10.4]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Ktx" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Localization" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Logging" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Maths" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Memory" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.MeshOptimizer" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Monitor.Common" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Monitor.Host" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.NativeFileDialog" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.NotCurses" Version="[2026.10.1]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Numerics" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.OpenAl" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.OpenGl" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.RakNet" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Render.Common" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Render.Debug" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Render.Mesh" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.RenderDoc" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.RenderDoc.ImGui" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Image" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ShaderC" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Slang" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Stb" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Strings" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Texture" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Texture.Abstractions" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan.Vma" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ZLib" Version="[2026.10.2]" />
+  </ItemGroup>
+
+  <!-- Since 2026-10-23 the native libraries ship in .Native companion packages. PackageDownload doesn't pull
+       dependencies, so list them too, or their DLLs show as NOT FOUND. -->
+  <ItemGroup>
+    <PackageDownload Include="Ahwoo.BRUTAL.Box2D.Native" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Glfw.Native" Version="[2026.10.5]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Gli.Native" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.FreeType.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImGui.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ImPlot.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Jolt.Native" Version="[2026.10.4]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Ktx.Native" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.MeshOptimizer.Native" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.NativeFileDialog.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.NotCurses.Native" Version="[2026.10.1]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.OpenAl.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.OpenGl.Native" Version="[2026.10.2]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.RakNet.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Image.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Mixer.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Sdl.Ttf.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.ShaderC.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Slang.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Stb.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan.Native" Version="[2026.10.3]" />
+    <PackageDownload Include="Ahwoo.BRUTAL.Vulkan.Vma.Native" Version="[2026.10.3]" />
   </ItemGroup>
 </Project>

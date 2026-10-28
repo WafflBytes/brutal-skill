@@ -10,7 +10,7 @@ public enum BlockKind
     Ramp,
 }
 
-/// <summary>A static oriented box: the only collision primitive the level uses (Jolt mesh shapes don't work, T36).</summary>
+/// <summary>A static oriented box: the only collision primitive the level uses (mesh shapes work from Jolt 2026.10.4, skill recipe 7.44).</summary>
 public readonly record struct Block(float3 Center, float3 HalfExtents, floatQuat Rotation, BlockKind Kind);
 
 /// <summary>A point the test/demo autopilot steers through; <see cref="Coin"/> &gt;= 0 marks a coin to collect there.</summary>

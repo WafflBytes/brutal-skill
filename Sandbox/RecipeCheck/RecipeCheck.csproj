@@ -1,34 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Runs skill recipes 7.1-7.8, 7.10 (Stb round trip), 7.11, 7.18-7.20 (SDL satellites) and 7.21 (ImGui), 7.35 and 7.36 (ImGui on SDL), 7.32 (OpenAL), 7.34 (Jolt constraints, compounds, characters) 7.37 (Localization), 7.38 (Texture), 7.39 (Monitor) and T30 (OpenAL licence files). Exit code = number of failed recipes. -->
   <ItemGroup>
-    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Collections" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Concurrency" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Box2D" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Jolt" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Glfw" Version="2026.10.4" />
-    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.RakNet" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Gltf" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Image" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.ImGui" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.ImGui.Backends" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.OpenGl" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.OpenAl" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Localization" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Texture" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Monitor.Host" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Slang" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.NativeFileDialog" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.RenderDoc" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.NotCurses" Version="2026.10.0" />
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Collections" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Concurrency" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Box2D" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Jolt" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Glfw" Version="2026.10.5" />
+    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.RakNet" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Gltf" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Image" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.ImGui" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.ImGui.Backends" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.OpenGl" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.OpenAl" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Localization" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Texture" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Monitor.Host" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Slang" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.NativeFileDialog" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.RenderDoc" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.NotCurses" Version="2026.10.1" />
   </ItemGroup>
   <!-- The licence-copy target from references/shipping.md (checked for OpenAL by T30). -->
   <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">

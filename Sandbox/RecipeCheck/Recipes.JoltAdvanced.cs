@@ -1,6 +1,7 @@
 // Recipe 7.34: Jolt constraints (hinge, point, distance, fixed, slider, cone, swing-twist), compound shapes, and both
-// character controllers (CharacterVirtual and the body-based Character), all headless. Also checks that the gaps the
-// skill documents (T46) are still gaps: when upstream exports them, a check here fails so the skill gets updated.
+// character controllers (CharacterVirtual and the body-based Character), all headless. Also runs the calls that were
+// export gaps in Jolt 2026.10.2 (T46) and work from 2026.10.4: a character contact listener, the constraint casts,
+// MotorSettings spring settings (a copy, T56) and body locks.
 using System.Runtime.CompilerServices;
 using Brutal.JoltApi;
 using Brutal.Numerics;
@@ -82,7 +83,7 @@ static unsafe partial class Recipes
         }
     }
 
-    /// <summary>The constraint casts (<c>Constraint.AsHingeConstraint</c> and friends) aren't exported (T46). The handles share one layout, which is how the library itself down-casts, so this reaches the hinge-only calls.</summary>
+    /// <summary>The 2026.10.2 route to the hinge-only calls, when <c>Constraint.AsHingeConstraint</c> was unexported (T46): the handles share one layout, which is how the library itself down-casts. Kept so it stays checked; 2026.10.4+ can use AsHingeConstraint (run at the end of the recipe).</summary>
     static HingeConstraint AsHinge(TwoBodyConstraint c) => Unsafe.BitCast<TwoBodyConstraint, HingeConstraint>(c);
 
     static HingeConstraintSettings WorldHinge(float3 pivot)
@@ -98,22 +99,20 @@ static unsafe partial class Recipes
         return hs;
     }
 
-    /// <summary>True when <paramref name="call"/> still throws EntryPointNotFoundException (an export gap).</summary>
-    static bool StillMissing(string what, Action call)
+    // Counts contacts with one body and can make that body passable (custom push-back).
+    sealed class WallListener(uint wall) : ManagedCharacterContactListener
     {
-        try
-        {
-            call();
-            Console.WriteLine($"     GAP CLOSED: {what} now works. Update T46 in jolt.md and this recipe.");
-            return false;
-        }
-        catch (EntryPointNotFoundException)
-        {
-            return true;
-        }
-    }
+        public int WallAdded;
+        public volatile bool PassWall;
 
-    sealed class NoOpCharacterListener : ManagedCharacterContactListener { }
+        protected override void OnContactAdded(CharacterVirtual character, in CharacterContact contact, ref CharacterContactSettings settings)
+        {
+            if (contact.BodyB == wall) Interlocked.Increment(ref WallAdded);
+        }
+
+        protected override bool OnContactValidate(CharacterVirtual character, in CharacterContact contact) =>
+            !(PassWall && contact.BodyB == wall);
+    }
 
     public static void JoltAdvancedRecipe()
     {
@@ -437,7 +436,7 @@ static unsafe partial class Recipes
             using (var w = new JoltScene())
             {
                 w.AddBox(new float3(30, 1, 30), new float3(0, -1, 0), MotionType.Static); // floor, top at y = 0
-                w.AddBox(new float3(0.5f, 2, 5), new float3(5.5f, 2, 0), MotionType.Static); // wall, face at x = 5
+                var wall = w.AddBox(new float3(0.5f, 2, 5), new float3(5.5f, 2, 0), MotionType.Static); // wall, face at x = 5
                 w.AddBox(new float3(0.5f, 0.15f, 5), new float3(2.5f, 0.15f, 0), MotionType.Static); // step 1 m long, top at y = 0.3
                 w.Physics.OptimizeBroadPhase();
                 using var capsuleSettings = CapsuleShapeSettings.Create(0.5f, 0.3f); // half height of the cylinder part, radius
@@ -447,7 +446,7 @@ static unsafe partial class Recipes
                 cs.SetUp(new float3(0, 1, 0));
                 cs.SetMaxSlopeAngle(MathF.PI * 50 / 180);
                 var ch = CharacterVirtual.Create(cs, new float3(0, 2, 0), floatQuat.Identity, w.Physics);
-                var bpf = BroadPhaseLayerFilter.Create(); // allow-all filters (the default-filter getters are unexported)
+                var bpf = BroadPhaseLayerFilter.Create(); // allow-all filters
                 var olf = ObjectLayerFilter.Create();
                 var bf = BodyFilter.Create();
                 var sf = ShapeFilter.Create();
@@ -499,8 +498,20 @@ static unsafe partial class Recipes
                 for (var i = 0; i < 120; i++) { Tick(0, false, false); jumpPeak = Math.Max(jumpPeak, ch.GetPosition().Y); }
                 Check(jumpPeak is > 2.5f and < 2.8f && ch.GetGroundState() == CharacterBase.GroundState.OnGround, $"CharacterVirtual: a jump at 6 m/s peaks at y {jumpPeak:F2} (0.8 + v^2/2g = 2.63) and lands ({ch.GetGroundState()})");
 
-                // Contact callbacks need a managed listener whose native proxy isn't exported (T46).
-                Check(StillMissing("a ManagedCharacterContactListener", () => { using var l = new NoOpCharacterListener(); }), "gap: CharacterContactListener can't be created (no push-back or contact events)");
+                // Contact callbacks (Jolt 2026.10.4+; T46 in 2026.10.2): a ManagedCharacterContactListener subclass,
+                // installed with SetListener. Its callbacks run inside ExtendedUpdate/Update.
+                using (var listener = new WallListener(wall))
+                {
+                    ch.SetListener(listener);
+                    ch.SetPosition(new float3(3.5f, 0.8f, 0));
+                    for (var i = 0; i < 240; i++) Tick(3, false, true);
+                    Check(listener.WallAdded > 0 && listener.LastCallbackException == null, $"CharacterContactListener: OnContactAdded fired for the wall ({listener.WallAdded}x)");
+                    Check(Math.Abs(ch.GetPosition().X - 4.68f) < 0.05f, $"CharacterContactListener: with validation on, the wall still stops it (x {ch.GetPosition().X:F2})");
+                    listener.PassWall = true;
+                    for (var i = 0; i < 120; i++) Tick(3, false, true);
+                    Check(ch.GetPosition().X > 6.5f && listener.LastCallbackException == null, $"CharacterContactListener: OnContactValidate returning false lets it walk through the wall (x {ch.GetPosition().X:F2})");
+                    ch.SetListener(default);                             // detach before disposing the listener
+                }
                 bpf.Dispose();
                 olf.Dispose();
                 bf.Dispose();
@@ -537,18 +548,35 @@ static unsafe partial class Recipes
                 ch.Dispose();
             }
 
-            // ---- the documented gaps (T46) must still be gaps ----
+            // ---- calls that were export gaps in 2026.10.2 (T46) and work from 2026.10.4 ----
             using (var w = new JoltScene())
             {
                 var anchor = w.AddBox(new float3(0.2f), pivot, MotionType.Static);
                 var bob = w.AddBox(new float3(0.2f), new float3(2, 10, 0), MotionType.Dynamic);
                 using var hs = WorldHinge(pivot);
                 var c = w.Bodies.CreateConstraint(hs, anchor, bob);
-                var gapsHold =
-                    StillMissing("Constraint.AsHingeConstraint", () => ((Constraint)c).AsHingeConstraint())
-                    & StillMissing("MotorSettings.GetSpringSettings", () => { using var m = MotorSettings.Create(); m.GetSpringSettings(); })
-                    & StillMissing("BodyLockRead.Create", () => { using var l = BodyLockRead.Create(w.Physics.GetBodyLockInterface(), anchor); });
-                Check(gapsHold, "gaps: Constraint casts, the MotorSettings spring getter and body locks are still unexported");
+                w.Physics.AddConstraint(c);
+                var hinge = ((Constraint)c).AsHingeConstraint();             // the real cast, no Unsafe.BitCast
+                w.Run(30);
+                Check(hinge.GetCurrentAngle() != 0, $"Constraint.AsHingeConstraint(): a usable HingeConstraint (angle {hinge.GetCurrentAngle():F3} rad)");
+                using (var m = MotorSettings.Create())
+                {
+                    using (var copy = m.GetSpringSettings())                  // an owned COPY: editing it changes nothing
+                    {
+                        copy.SetFrequency(5f);
+                        using var unchanged = m.GetSpringSettings();
+                        Check(unchanged.GetFrequency() != 5f, $"MotorSettings.GetSpringSettings() returns a copy (frequency still {unchanged.GetFrequency()})");
+                        m.SetSpringSettings(copy);                            // write it back
+                    }
+                    using var after = m.GetSpringSettings();
+                    Check(Math.Abs(after.GetFrequency() - 5f) < 1e-6f, "MotorSettings.SetSpringSettings(copy) applies it (frequency 5 read back)");
+                }
+                using (var l = BodyLockRead.Create(w.Physics.GetBodyLockInterface(), bob))
+                {
+                    Check(l.Succeeded() && l.GetBody().GetID() == bob && !l.GetBody().IsStatic(), "BodyLockRead: Succeeded, GetBody() is the dynamic body");
+                    l.ReleaseLock();
+                }
+                w.Physics.RemoveConstraint(c);
                 c.Dispose();
             }
         }

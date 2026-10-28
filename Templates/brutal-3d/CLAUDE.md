@@ -16,7 +16,7 @@ Leave the rest unopened unless you change that area: `Program.cs`, `Platform/GlW
 ## Layout
 
 - `Sim/`: the game itself. Pure C# plus Jolt (headless), fixed 1/60 s step. **No SDL or GL types here** (skill rule R6), so it runs in the self-test.
-  - `Level.cs`: static boxes (ramps are rotated boxes: Jolt mesh shapes don't work, skill T36), coins, the autopilot route, CPU ray casts for coin placement and the shadow.
+  - `Level.cs`: static boxes (ramps are rotated boxes; Jolt mesh, hull and height-field shapes work from Jolt 2026.10.4, skill recipe 7.44), coins, the autopilot route, CPU ray casts for coin placement and the shadow.
   - `Physics.cs`: `JoltRuntime` (process-wide init; `Shutdown()` runs at exit in `Program.cs`) and `PhysicsScene` (one Jolt system; teardown order per T18).
   - `World.cs`: rules, timer, chase camera, per-step events for sounds. `Bot.cs`: autopilot used by the self-test and `--snapshot`. `ScreenFlow.cs`: splash then play.
 - `Program.cs`: command-line modes, VC++ runtime check (T41), crash handler, Jolt shutdown.

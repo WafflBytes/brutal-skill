@@ -12,14 +12,14 @@ BRUTAL (Ahwoo / RocketWerkz) is a set of C# bindings and helpers for writing gam
 2. Otherwise, take this skill folder's real path and go up three levels (`<home>/.claude/skills/brutal`). If the skill was installed by linking (for example `~/.claude/skills/brutal` as a junction or symlink), resolve the link first: `(Get-Item <skill folder>).Target` in PowerShell, `readlink -f` elsewhere.
 
 What's in it:
-- `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL, the source of all 50 packages (no project files). Search it; don't edit it. If it's missing: `git clone https://github.com/ahwootech/BRUTAL BRUTAL` in BRUTAL home.
+- `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL, the source of all 50 packages (no project files), plus `samples/` (runnable `Hello<Package>.cs` and `Demo*.cs`). Search it; don't edit it. If it's missing: `git clone https://github.com/ahwootech/BRUTAL BRUTAL` in BRUTAL home.
 - `Templates/brutal-sdl/`: the starter game template (see "Starting a new game").
 - `Sandbox/`: verification tools. `Sandbox/verify.ps1` runs them all (`references/verification.md`).
 - `%NUGET%` = `%USERPROFILE%\.nuget\packages`.
 
 **Update check (once a session):** in a git clone, run `git -C <home> ls-remote origin main`; if `git -C <home> cat-file -e <hash>^{commit}` fails, a newer skill exists: tell the user and offer `pull --ff-only`. Never pull unasked. Skip if offline.
 
-**Verified against:** `Ahwoo.BRUTAL.*` 2026.10.0–2026.10.4 on .NET 10, with `BRUTAL/` source at commit `a25cdf8`. Windows x64 is fully verified. Linux x64 runs the headless recipes in CI and WSL2, but not Vulkan, windowed recipes or the templates; each recipe says where it ran. macOS: nothing run. Last full re-verification: 2026-10-18 (`references/verification.md`).
+**Verified against:** `Ahwoo.BRUTAL.*` 2026.10.1–2026.10.5 (Jolt 2026.10.4, Slang 2026.10.3) on .NET 10, with `BRUTAL/` source at commit `7a3b72d`. Windows x64 is fully verified. Linux x64 ran the headless recipes in CI and WSL2 on the previous packages (2026-10-18), but not Vulkan, windowed recipes or the templates; each recipe says where it ran. macOS: nothing run. Last full re-verification: 2026-10-28 (`references/verification.md`).
 
 **Markers:** [RUN] = compiled and executed; [SRC] = checked in source, not executed; [DOC] = from a package README, unverified.
 
@@ -35,7 +35,7 @@ What's in it:
 ## Rules
 
 - **R1 Source over memory.** Confirm every API with `rg` in `BRUTAL/` (lookup protocol below) before calling it. The repo matches the published packages: entry-point counts are identical for Jolt, SDL, Box2D and GLFW.
-- **R2 Compiling isn't working.** Bindings can compile and still throw `EntryPointNotFoundException`; 774 Jolt functions aren't exported (`references/export-gaps.md`). Run every new native call at least once.
+- **R2 Compiling isn't working.** Bindings can compile and still throw `EntryPointNotFoundException` (`references/export-gaps.md`), or run and do nothing. Run every new native call at least once.
 - **R3 Verify by running** a headless self-test and/or a scripted `--snapshot` (`references/verification.md`). Silent failures (traps) don't show up when reading code.
 - **R4** BRUTALCORE0009/0010 are **build errors**. Fix the memory source (stackalloc, native memory or `fixed`); never suppress them (`references/core-libs.md`).
 - **R5 Own native memory.** Dispose or destroy everything from `Mem`, `PtrOwner<T>`, `NativeList<T>`, `Stb.Load` and Vulkan/Jolt/SDL `Create*` exactly once. Handles are value types, so copies alias (T17).
@@ -74,9 +74,9 @@ Common usings for recipes: `Brutal`, `Brutal.Numerics`, `Brutal.Logging`, plus t
 | | |
 |---|---|
 | TFM | `net10.0` only. Sources use C# 14 `extension` blocks, `allows ref struct`, `ref` fields, generic math |
-| Packages | 50 × `Ahwoo.BRUTAL.<Name>` on **nuget.org**, restored anonymously. List them with `dotnet package search Ahwoo.BRUTAL --take 100` |
-| Versions | 2026.10.0–2026.10.4; each package is versioned independently |
-| Native RIDs | `win-x64`, `linux-x64`, `osx-arm64` (`runtimes/<rid>/native/`). win-x64 fully verified; linux-x64 headless recipes only; osx-arm64 not run |
+| Packages | 50 × `Ahwoo.BRUTAL.<Name>` on **nuget.org**, restored anonymously. List them with `dotnet package search Ahwoo.BRUTAL --take 100`. Natives ship in `<Name>.Native` packages, pulled in for you |
+| Versions | 2026.10.1–2026.10.5; each package is versioned independently. Use Jolt ≥ 2026.10.4 and Slang ≥ 2026.10.3 |
+| Native RIDs | `win-x64`, `linux-x64`, `osx-arm64` (`<name>.native/<ver>/runtimes/<rid>/native/`). win-x64 fully verified; linux-x64 headless recipes only; osx-arm64 not run |
 | Namespaces | `Brutal`, `Brutal.Pointers`, `Brutal.<Lib>` or `Brutal.<Lib>Api` (`Brutal.SdlApi`, `Brutal.VulkanApi`, `Brutal.JoltApi`) |
 | Help and bugs | Questions: [BRUTAL forums](https://forums.ahwoo.com/forums/brutal/). Bugs: GitHub issues; how to report is in `references/maintaining.md` |
 
@@ -90,9 +90,9 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks><RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.1" />
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.Logging" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.2" />
   </ItemGroup>
 </Project>
 ```
@@ -120,7 +120,7 @@ Start from a template rather than an empty project. Both are small playable game
 | Template | For | Stack |
 |---|---|---|
 | `Templates/brutal-sdl` | 2D games | SDL3 renderer, SDL_ttf, SDL_mixer, Stb |
-| `Templates/brutal-3d` | 3D games | SDL3 window + OpenGL 4.1 core, Jolt physics (boxes and spheres; rotated boxes for ramps, see T36), chase camera, TrueType text and the logo as GL textures, SDL_mixer, gamepad |
+| `Templates/brutal-3d` | 3D games | SDL3 window + OpenGL 4.1 core, Jolt physics (boxes and spheres; rotated boxes for ramps), chase camera, TrueType text and the logo as GL textures, SDL_mixer, gamepad |
 
 ```text
 dotnet new list brutal                                     # already installed? then skip the installs
@@ -165,8 +165,9 @@ Search with your Grep tool (or `rg` from BRUTAL home). Pass the pattern as writt
 Sources, in priority order:
 1. **`BRUTAL/Brutal.<Lib>/`**. `Generated/` holds the bindings; `Manual/` holds hand-written ergonomics. Generated doc comments link to the upstream C header line.
 2. **Package READMEs** (not in git): `%NUGET%\ahwoo.brutal.<name>\<ver>\README.md`. Useful ones: sdl (handle and threading rules, satellite libraries), jolt (init and shutdown order), monitor (options), openal, slang, fmod. Some are stale (T7, T8).
-3. **`brutal-conventions.md`** inside the Core package (summarised in `references/core-libs.md`).
-4. **The compiled package**: `lib\net10.0\*.dll`, `runtimes\win-x64\native\`, `analyzers\dotnet\cs\`.
+3. **`BRUTAL/samples/`**: `Hello/Hello<Package>.cs` is upstream's minimal use of a package (`dotnet run <file>.cs`). Treat it as [DOC]: its `#:package` lines pin older versions, and comments can be stale (T57).
+4. **`brutal-conventions.md`** inside the Core package (summarised in `references/core-libs.md`).
+5. **The compiled package**: `lib\net10.0\*.dll`, `analyzers\dotnet\cs\`; natives in `ahwoo.brutal.<name>.native\<ver>\runtimes\win-x64\native\`.
 
 ## Traps
 
@@ -195,7 +196,7 @@ Match the effort to the task. Don't build extra harnesses (multi-window bots, th
 
 ## Not in the repo (don't search for it)
 
-Project, solution and build files; generators (`Brutal.*.Generate`) and T4 templates; analyzer and interop-generator source (behaviour in `references/core-libs.md`); tests, samples and per-package guides; source for `Render.Common`/`Render.Debug` and `Brutal.Monitor.Subprocess`; any C# API for FreeType or ZLib (native-only).
+Project, solution and build files; generators (`Brutal.*.Generate`) and T4 templates; analyzer and interop-generator source (behaviour in `references/core-libs.md`); tests and per-package guides; source for `Render.Common`/`Render.Debug` and `Brutal.Monitor.Subprocess`; any C# API for FreeType or ZLib (native-only).
 
 ## Keeping this skill current
 

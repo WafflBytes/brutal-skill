@@ -32,6 +32,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 **`[Fixed]`:**
 - `[return: Fixed]` (e.g. `NativeList<T>.AsSpan()`) means the memory never moves. You may take its address, but never let the span escape: no fields, closures, or holding it across an `await`.
 - A `[Fixed]` parameter requires non-moving memory.
+- From Core 2026.10.4, `[Fixed]` also goes on a class, struct or interface (everything it exposes has a fixed address), and `[FixedWhen(nameof(T))]` / `[FixedWhen(typeof(X))]` on a return value, property or parameter means "fixed if that type is" [SRC: `Brutal.Core/Attributes.cs`]. `FixedProbe` still passes with the 2026.10.4 analyzers; the new forms weren't probed.
 
 **Sizes:** `ByteSize.Of<T>()`, `ByteSize.Of<T>(count)`, `ByteSize.Of(span)`, not `sizeof`. `ElementCount` counts elements; read it with `.Value`.
 

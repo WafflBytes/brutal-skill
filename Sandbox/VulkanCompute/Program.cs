@@ -42,7 +42,7 @@ static unsafe int Run(int gpuIndex)
     using var instance = Vulkan.CreateInstance(
         new Instance.CreateInfo
         {
-            AppInfo = new VkApplicationInfo { ApiVersion = (1 << 22) | (3 << 12) },
+            AppInfo = new VkApplicationInfo { ApiVersion = VK.API_VERSION_1_3 },
             EnabledExtensions = [],
             EnabledLayers = [],
         }

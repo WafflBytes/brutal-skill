@@ -21,12 +21,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.1" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.2" />
-    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.Numerics" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Stb" Version="2026.10.3" />
   </ItemGroup>
 
   <ItemGroup>
