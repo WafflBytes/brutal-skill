@@ -1,14 +1,25 @@
 # Runs every Sandbox check (plus the skill lint) and prints a one-line verdict per tool. Exit code = number of failed checks.
 #   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan] [-NoDialog] [-NoAudio]
+#   pwsh -File Sandbox/verify.ps1 [...]   (Linux, macOS)
 # -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11, VulkanCompute, VulkanDepth, VulkanTexture and VulkanSplash.
 # -NoDialog: the template check skips its two message-box checks (CI). -NoAudio: SampleCheck skips the samples that play sound (CI).
-# Skipped tools print SKIP, never PASS. -NoWindow and -NoVulkan also skip those samples.
+# Skipped tools print SKIP, never PASS. -NoWindow and -NoVulkan also skip those samples. Off Windows, ExportAudit and the
+# template checks print SKIP: both work on win-x64 binaries.
 param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoDialog, [switch]$NoAudio)
 
 $ErrorActionPreference = 'Continue'
 Set-Location $PSScriptRoot
 $failed = 0
 $results = @()
+$onWindows = [Environment]::OSVersion.Platform -eq 'Win32NT'
+
+# Child scripts run in the PowerShell that runs this one: powershell.exe, or pwsh (the only one off Windows). $PSHOME
+# holds the executable even when pwsh is a dotnet global tool, whose process is dotnet itself.
+$psExe = Join-Path $PSHOME $(if ($PSVersionTable.PSEdition -ne 'Core') { 'powershell.exe' } elseif ($onWindows) { 'pwsh.exe' } else { 'pwsh' })
+function RunScript($file, $scriptArgs) {
+    $global:LASTEXITCODE = -1   # stays -1 if the script can't start, so that reports FAIL, not the previous tool's exit code
+    & $psExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot $file) @scriptArgs
+}
 
 function Report($name, $ok, $note) {
     $script:results += '{0,-4} {1,-14} {2}' -f ($(if ($ok) { 'PASS' } else { 'FAIL' })), $name, $note
@@ -72,17 +83,20 @@ $sampleArgs = @()
 if ($NoWindow) { $sampleArgs += '-NoWindow' }
 if ($NoVulkan) { $sampleArgs += '-NoVulkan' }
 if ($NoAudio) { $sampleArgs += '-NoAudio' }
-$samples = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'SampleCheck.ps1') @sampleArgs
+$samples = RunScript 'SampleCheck.ps1' $sampleArgs
 $samples | Out-Host
 $sampleCode = $LASTEXITCODE
 $counts = ($samples | Select-String '^(PASS|FAIL|SKIP) ' | Group-Object { $_.Matches[0].Groups[1].Value } | ForEach-Object { "$($_.Count) $($_.Name.ToLower())" }) -join ', '
 Report 'SampleCheck' ($sampleCode -eq 0) "BRUTAL/samples at the verified versions: $counts"
 
-Write-Host '== ExportAudit =='
-$audit = dotnet run -c Release --no-build --project ExportAudit
-$audit | Out-Host
-$total = ($audit | Select-String '^Total:').Line
-Report 'ExportAudit' ($LASTEXITCODE -eq 0) "$total Compare with references/export-gaps.md."
+if ($onWindows) {
+    Write-Host '== ExportAudit =='
+    $audit = dotnet run -c Release --no-build --project ExportAudit
+    $audit | Out-Host
+    $total = ($audit | Select-String '^Total:').Line
+    Report 'ExportAudit' ($LASTEXITCODE -eq 0) "$total Compare with references/export-gaps.md."
+}
+else { Skip 'ExportAudit' 'Windows only (reads the win-x64 DLLs and System32; elsewhere the counts differ)' }
 
 Write-Host '== AnalyzerDump =='
 $rules = dotnet run -c Release --no-build --project AnalyzerDump
@@ -100,19 +114,20 @@ Report 'FixedProbe' ($fineOk -and (($ids -join ' ') -eq $expected)) "accepted pa
 dotnet build FixedProbe -c Release -nologo -v quiet | Out-Null   # leave a clean build behind
 
 foreach ($tplName in 'brutal-sdl', 'brutal-3d') {
+    $label = if ($tplName -eq 'brutal-sdl') { 'Template' } else { 'Template3D' }
+    if (-not $onWindows) { Skip $label 'Windows only (the template publishes and runs a win-x64 exe)'; continue }
     Write-Host "== Template $tplName =="
     $tplArgs = @('-Template', $tplName)
     if ($NoWindow) { $tplArgs += '-NoWindow' }
     if ($NoDialog) { $tplArgs += '-NoDialog' }
-    $tpl = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-template.ps1') @tplArgs
+    $tpl = RunScript 'check-template.ps1' $tplArgs
     $tpl | Out-Host
     $tplSkips = @($(if ($NoWindow) { '--smoke' }), $(if ($NoWindow -and $tplName -eq 'brutal-3d') { '--snapshot (GL)' }), $(if ($NoDialog) { 'crash + VC++ runtime dialogs' }) | Where-Object { $_ })
-    $label = if ($tplName -eq 'brutal-sdl') { 'Template' } else { 'Template3D' }
     Report $label ($LASTEXITCODE -eq 0) ("dotnet new $($tplName): build, selftest, snapshot, publish, run from empty folder" + $(if ($tplSkips) { "; skipped: $($tplSkips -join ', ')" }))
 }
 
 Write-Host '== Skill lint =='
-$lint = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'lint-skill.ps1')
+$lint = RunScript 'lint-skill.ps1'
 $lint | Out-Host
 Report 'SkillLint' ($LASTEXITCODE -eq 0) (($lint | Select-Object -Last 1) -replace '^Skill lint: ', '')
 
