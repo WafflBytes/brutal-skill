@@ -138,7 +138,9 @@ static unsafe partial class Recipes
         [
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "segoeui.ttf"),
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", // Debian, Ubuntu
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",             // Arch
+            "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf", // Fedora
             "/System/Library/Fonts/Supplemental/Arial.ttf",
         ];
         return candidates.FirstOrDefault(File.Exists);
