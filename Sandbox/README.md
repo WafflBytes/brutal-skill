@@ -11,6 +11,10 @@ powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 -NoWindow -NoVulkan 
 
 The script prints one PASS/FAIL/SKIP line per tool, and its exit code is the number of failures. `-NoDialog` makes `check-template.ps1` skip its two message-box checks (it still checks `error.log`). `-NoAudio` makes `SampleCheck.ps1` skip the samples that play sound. Anything skipped prints SKIP, never PASS.
 
+On Linux and macOS run it with `pwsh -File Sandbox/verify.ps1` (PowerShell 7; it starts `SampleCheck.ps1` and `lint-skill.ps1` with the same PowerShell). ExportAudit and both template checks print SKIP there, because they work on win-x64 binaries, and windowed samples print SKIP after their run (no screenshot or close request off Windows).
+
+Windowed runs on Linux without a display, under Xvfb (`xvfb-run -a -s "-screen 0 1280x1024x24" pwsh -File Sandbox/verify.ps1 ...`): Mesa's hardware Vulkan drivers (Intel, AMD) can't present there (`No DRI3 support detected - required for presentation`), so VulkanWindow finds no GPU that can present. Pick lavapipe with `VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.json` (the path varies by distribution); NVIDIA's driver presented on Xvfb too. The off-screen Vulkan tools need no display and run on lavapipe as well.
+
 ## CI
 
 `.github/workflows/verify.yml` runs on every push and pull request to `main` (and by hand from the Actions tab). Both jobs clone ahwootech/BRUTAL at the commit in `SKILL.md`'s "Verified against" line, so `lint-skill.ps1` checks it.
@@ -39,7 +43,7 @@ Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
 `check-template.ps1` (also run by `verify.ps1`) runs `dotnet new brutal-sdl` in a throwaway template hive (nothing is installed for you), then builds with warnings as errors, runs `--selftest`, `--snapshot` and `--smoke`, publishes a single-file exe, and runs it from an empty folder. Add `-Keep` to inspect the generated project.
 
-`SampleCheck.ps1` (also run by `verify.ps1`) copies upstream's `BRUTAL/samples/Hello` and `Demo` files to a temp folder, rewrites their `#:package` versions to the ones in `ExportAudit.csproj` (`-Pinned` keeps upstream's), builds each with `dotnet build <file>.cs` and runs it. Headless samples must exit 0 within 120 s. Windowed ones run for 6 s, get a screenshot through `PrintWindow` (it must show at least two colours; saved under `%TEMP%\brutal-samplecheck\screenshots`), then a close request, and must exit 0. `HelloFmod` must throw `DllNotFoundException` (no FMOD natives); `HelloNativeFileDialog` and `HelloNotCurses` are skipped. A new upstream sample runs as headless until it's classified in the script's `$kinds` table. `-Only HelloJolt,DemoVulkan` runs a few.
+`SampleCheck.ps1` (also run by `verify.ps1`) copies upstream's `BRUTAL/samples/Hello` and `Demo` files to a temp folder, rewrites their `#:package` versions to the ones in `ExportAudit.csproj` (`-Pinned` keeps upstream's), builds each with `dotnet build <file>.cs` and runs it. Headless samples must exit 0 within 120 s. Windowed ones run for 6 s, get a screenshot through `PrintWindow` (it must show at least two colours; saved under `%TEMP%\brutal-samplecheck\screenshots`), then a close request, and must exit 0; off Windows they only have to run for 6 s without an exception, then print SKIP. `HelloFmod` must throw `DllNotFoundException` (no FMOD natives); `HelloNativeFileDialog` and `HelloNotCurses` are skipped. A new upstream sample runs as headless until it's classified in the script's `$kinds` table. `-Only HelloJolt,DemoVulkan` runs a few.
 
 `lint-skill.ps1` (also run by `verify.ps1`) checks the skill itself: one full entry per trap/bug ID, an index row in `references/traps.md` naming the right file, every reference file linked, the "next free IDs" note in `traps.md`, the export-gap list present, and a size budget for `SKILL.md`.
 
@@ -54,7 +58,8 @@ Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
 ## Notes
 
-- `Directory.Build.props` holds the shared settings: `net10.0`, unsafe code, `win-x64` (override with `-p:BrutalRid=<rid>`).
+- `Directory.Build.props` holds the shared settings: `net10.0`, unsafe code, and the runtime identifier: `win-x64` on Windows, `linux-<arch>` or `osx-<arch>` elsewhere (override with `-p:BrutalRid=<rid>` or the `BrutalRid` environment variable).
+- RecipeCheck 7.19 needs a TrueType font: `BRUTAL_TEST_FONT=<path>`, else Arial or Segoe UI (Windows), DejaVu Sans at the Debian, Arch or Fedora path, or Arial (macOS). Without one it prints SKIP.
 - ExportAudit and AnalyzerDump read the NuGet cache (`%NUGET_PACKAGES%` or `%USERPROFILE%\.nuget\packages`). Restoring ExportAudit downloads every package there.
 - ExportAudit follows the Windows library renames done by package resolvers (`glfw`→`glfw3`, `openal`→`OpenAL32`, `shaderc`→`shaderc_shared`, `vulkan`→`vulkan-1` in System32). FMOD always shows as not found because it ships no binaries (T21).
 - These tools were rebuilt on 2026-10-17 after the originals were lost. Older guide revisions mention `BrutalSmoke`, `VulkanProbe` and `AllPackages`; RecipeCheck and ExportAudit cover what they did.

@@ -14,7 +14,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 6. **Run the published output** from an empty folder (7.14).
 7. **Edge cases:** missing assets (T1), Vulkan resize (T4), no Vulkan runtime (T5).
 
-`Sandbox/` tools (details in `Sandbox/README.md`). Run all of them with `powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1` (add `-NoWindow -NoVulkan` when there's no display or GPU, `-NoAudio` without a sound device); the exit code is the number of failures. Run one with `dotnet run -c Release --project Sandbox/<Name>`:
+`Sandbox/` tools (details in `Sandbox/README.md`). Run all of them with `powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1` (add `-NoWindow -NoVulkan` when there's no display or GPU, `-NoAudio` without a sound device); the exit code is the number of failures. On Linux and macOS use `pwsh -File Sandbox/verify.ps1`; ExportAudit, the template checks and the windowed samples print SKIP there. Under Xvfb, Mesa's hardware Vulkan drivers can't present (no DRI3): use lavapipe (`VK_DRIVER_FILES=<lvp_icd.json>`). Run one with `dotnet run -c Release --project Sandbox/<Name>`:
 
 | Tool | What it does |
 |---|---|
@@ -25,7 +25,7 @@ Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `S
 | `VulkanSplash` | Runs 7.31 off-screen: logo + SDL_ttf credits line in one texture, letterboxed quad, fade; pixels read back and a PNG written for a look. Skipped by `-NoVulkan` |
 | `NetSession` | Runs 7.33: spawns a host and client processes (bots) over loopback and checks join, agreement, loss smoothing, crash, version mismatch, full host. About 30 s; exit = failed checks |
 | `VulkanCompute` | Runs 7.12; exit code 0 means correct results. `-- <index>` picks a GPU |
-| `SampleCheck.ps1` | Builds and runs upstream's `BRUTAL/samples/Hello` and `Demo` files at the verified package versions (`-Pinned`: upstream's own). Headless ones must exit 0; windowed ones get a screenshot (must draw), then a close request (must exit 0). FMOD must throw `DllNotFoundException`; the file dialog and NotCurses samples are skipped (7.41, 7.43). `-Only HelloJolt,DemoVulkan`, `-NoWindow`, `-NoVulkan`, `-NoAudio` |
+| `SampleCheck.ps1` | Builds and runs upstream's `BRUTAL/samples/Hello` and `Demo` files at the verified package versions (`-Pinned`: upstream's own). Headless ones must exit 0; windowed ones get a screenshot (must draw), then a close request (must exit 0); off Windows they print SKIP after 6 s without an exception. FMOD must throw `DllNotFoundException`; the file dialog and NotCurses samples are skipped (7.41, 7.43). `-Only HelloJolt,DemoVulkan`, `-NoWindow`, `-NoVulkan`, `-NoAudio` |
 | `ExportAudit` | Export gaps (`export-gaps.md`) for all 50 packages, reading the DLLs from their `.Native` companions (`--detail`, `--package <name>`). Restoring it downloads every package |
 | `AnalyzerDump` | Lists every analyzer rule, code fix and generator (`core-libs.md`) |
 | `FixedProbe` | `[Fixed]` cases: builds and runs by default; `-p:ProbeErrors=true` must fail with exactly 0009 and 0010 |
