@@ -26,6 +26,12 @@
     <!--#if (renderer == "gl") -->
     <PackageReference Include="Ahwoo.BRUTAL.OpenGl" Version="2026.10.2" />
     <!--#endif -->
+    <!--#if (renderer == "vulkan") -->
+    <PackageReference Include="Ahwoo.BRUTAL.Glfw" Version="2026.10.5" />
+    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="2026.10.3" />
+    <!--#endif -->
     <PackageReference Include="Ahwoo.BRUTAL.Sdl" Version="2026.10.3" />
     <PackageReference Include="Ahwoo.BRUTAL.Sdl.Mixer" Version="2026.10.3" />
     <PackageReference Include="Ahwoo.BRUTAL.Sdl.Ttf" Version="2026.10.3" />

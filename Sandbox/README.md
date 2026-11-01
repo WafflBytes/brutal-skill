@@ -37,7 +37,7 @@ Nothing in CI covers a display or a GPU: run the full `verify.ps1` on a desktop 
 
 Run one tool: `dotnet run -c Release --project Sandbox/<Name>`.
 
-`check-template.ps1` (also run by `verify.ps1`, once per renderer) runs `dotnet new brutal-game --renderer sdl` (or `-Renderer gl`) in a throwaway template hive (nothing is installed for you), then builds with warnings as errors, runs `--selftest`, `--snapshot` and `--smoke`, publishes a single-file exe, and runs it from an empty folder. Add `-Keep` to inspect the generated project.
+`check-template.ps1` (also run by `verify.ps1`, once per renderer) runs `dotnet new brutal-game --renderer sdl` (or `-Renderer gl`, `-Renderer vulkan`) in a throwaway template hive (nothing is installed for you), then builds with warnings as errors, runs `--selftest`, `--snapshot` and `--smoke`, publishes a single-file exe, and runs it from an empty folder. Add `-Keep` to inspect the generated project.
 
 `SampleCheck.ps1` (also run by `verify.ps1`) copies upstream's `BRUTAL/samples/Hello` and `Demo` files to a temp folder, rewrites their `#:package` versions to the ones in `ExportAudit.csproj` (`-Pinned` keeps upstream's), builds each with `dotnet build <file>.cs` and runs it. Headless samples must exit 0 within 120 s. Windowed ones run for 6 s, get a screenshot through `PrintWindow` (it must show at least two colours; saved under `%TEMP%\brutal-samplecheck\screenshots`), then a close request, and must exit 0. `HelloFmod` must throw `DllNotFoundException` (no FMOD natives); `HelloNativeFileDialog` and `HelloNotCurses` are skipped. A new upstream sample runs as headless until it's classified in the script's `$kinds` table. `-Only HelloJolt,DemoVulkan` runs a few.
 

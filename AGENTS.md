@@ -6,7 +6,7 @@
 
 - `.claude/skills/brutal/`: the reference (`SKILL.md` + `references/*.md`). Update it there.
 - `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL. It holds the source of every `Ahwoo.BRUTAL.*` package, with no project files. Read it to confirm APIs; don't edit it.
-- `Templates/brutal-game/`: the game skeleton. New games start from it: `dotnet new install Templates/brutal-game`, then `dotnet new brutal-game -n MyGame` (2D, SDL renderer) or `--renderer gl` (OpenGL). It holds the plumbing (licence, publish, notices, dialogs, test modes) and a placeholder marker, not a game. Test changes with `Sandbox/check-template.ps1 -Renderer sdl|gl`.
+- `Templates/brutal-game/`: the game skeleton. New games start from it: `dotnet new install Templates/brutal-game`, then `dotnet new brutal-game -n MyGame` (2D, SDL renderer), `--renderer gl` (OpenGL) or `--renderer vulkan`. It holds the plumbing (licence, publish, notices, dialogs, test modes) and a placeholder marker, not a game. Test changes with `Sandbox/check-template.ps1 -Renderer sdl|gl|vulkan`.
 - `Sandbox/`: verification tools (`RecipeCheck`, `VulkanCompute`, `ExportAudit`, `AnalyzerDump`, `FixedProbe`, `SampleCheck.ps1`; see `Sandbox/README.md`). Run all of them, plus the template check and the skill lint, with `powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1`, or one with `dotnet run -c Release --project Sandbox/<Name>`.
 
 ## Critical rules (summary; the skill has the details)

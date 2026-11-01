@@ -118,10 +118,10 @@ Start from the skeleton rather than an empty project. It has no game, only the p
 ```text
 dotnet new list brutal                                     # already installed? then skip the install
 dotnet new install <BRUTAL home>/Templates/brutal-game     # once per machine
-dotnet new brutal-game -n MyGame -o <folder>/MyGame        # 2D, SDL renderer; add --renderer gl for OpenGL 4.1 (3D)
+dotnet new brutal-game -n MyGame -o <folder>/MyGame        # 2D SDL renderer; or --renderer gl (OpenGL 4.1) / vulkan
 ```
 
-Then write your game in `Sim/` (keep it free of SDL and GL types) and its drawing in `Platform/`, and add a self-test check for each rule. The generated `CLAUDE.md` says which files to change. For 3D physics add Jolt (`references/jolt.md`). For an online game, remove pause-on-focus-loss and test with two processes on 127.0.0.1 (`references/misc.md`). For Vulkan, take the skeleton's `.csproj`, `Program.cs` and `Platform/NativeDialog.cs`, and the `Sandbox/Vulkan*` programs (`references/vulkan.md`).
+Then write your game in `Sim/` (keep it free of SDL and GL types) and its drawing in `Platform/`, and add a self-test check for each rule. The generated `CLAUDE.md` says which files to change. For 3D physics add Jolt (`references/jolt.md`). For an online game, remove pause-on-focus-loss and test with two processes on 127.0.0.1 (`references/misc.md`). For Vulkan, start from `--renderer vulkan` rather than the `Sandbox/Vulkan*` programs.
 
 ## Name translation (C/C++ → BRUTAL)
 

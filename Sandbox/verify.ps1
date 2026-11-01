@@ -1,6 +1,6 @@
 # Runs every Sandbox check (plus the skill lint) and prints a one-line verdict per tool. Exit code = number of failed checks.
 #   powershell -ExecutionPolicy Bypass -File Sandbox/verify.ps1 [-NoWindow] [-NoVulkan] [-NoDialog] [-NoAudio]
-# -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11, VulkanCompute, VulkanDepth, VulkanTexture and VulkanSplash.
+# -NoWindow: GLFW recipe uses the Null platform and the template skips --smoke (CI / no display). -NoVulkan: skip 7.11, VulkanCompute, VulkanDepth, VulkanTexture, VulkanSplash and the Vulkan skeleton.
 # -NoDialog: the template check skips its two message-box checks (CI). -NoAudio: SampleCheck skips the samples that play sound (CI).
 # Skipped tools print SKIP, never PASS. -NoWindow and -NoVulkan also skip those samples.
 param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoDialog, [switch]$NoAudio)
@@ -99,15 +99,16 @@ $expected = 'BRUTALCORE0009 BRUTALCORE0010'
 Report 'FixedProbe' ($fineOk -and (($ids -join ' ') -eq $expected)) "accepted patterns ran; error build gave: $($ids -join ', ')"
 dotnet build FixedProbe -c Release -nologo -v quiet | Out-Null   # leave a clean build behind
 
-foreach ($renderer in 'sdl', 'gl') {
+foreach ($renderer in 'sdl', 'gl', 'vulkan') {
+    $label = @{ sdl = 'TemplateSdl'; gl = 'TemplateGl'; vulkan = 'TemplateVk' }[$renderer]
+    if ($renderer -eq 'vulkan' -and $NoVulkan) { Skip $label '-NoVulkan'; continue }
     Write-Host "== Template brutal-game --renderer $renderer =="
     $tplArgs = @('-Renderer', $renderer)
     if ($NoWindow) { $tplArgs += '-NoWindow' }
     if ($NoDialog) { $tplArgs += '-NoDialog' }
     $tpl = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-template.ps1') @tplArgs
     $tpl | Out-Host
-    $tplSkips = @($(if ($NoWindow) { '--smoke' }), $(if ($NoWindow -and $renderer -eq 'gl') { '--snapshot (GL)' }), $(if ($NoDialog) { 'crash + VC++ runtime dialogs' }) | Where-Object { $_ })
-    $label = if ($renderer -eq 'sdl') { 'TemplateSdl' } else { 'TemplateGl' }
+    $tplSkips = @($(if ($NoWindow) { '--smoke' }), $(if ($NoWindow -and $renderer -ne 'sdl') { '--snapshot' }), $(if ($NoDialog) { 'crash + VC++ runtime dialogs' }) | Where-Object { $_ })
     Report $label ($LASTEXITCODE -eq 0) ("dotnet new brutal-game --renderer $($renderer): build, selftest, snapshot, publish, run from empty folder" + $(if ($tplSkips) { "; skipped: $($tplSkips -join ', ')" }))
 }
 

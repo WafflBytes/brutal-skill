@@ -4,6 +4,13 @@ Read this for Vulkan (instance, devices, compute, windowed rendering/swapchain) 
 
 Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
+**A Vulkan game starts from `dotnet new brutal-game --renderer vulkan`** [RUN: `check-template.ps1 -Renderer vulkan`]. It already has recipes 7.11, 7.13, 7.29, 7.30 and 7.31 working together, so read its generated `CLAUDE.md` and only the recipe sections you need here, not the `Sandbox/Vulkan*` programs. What it contains (`Platform/Vk/`):
+- `App.cs`: a GLFW window, the 7.13 swapchain (resize, minimise, out-of-date), 2 frames in flight, the fixed-step loop and `--smoke` (posts real key messages to the window).
+- `VkGpu.cs`: the instance, picking a GPU (discrete first), the device, host buffers, texture upload, and GLSL to SPIR-V with ShaderC.
+- `Renderer.cs`: one render pass (colour + depth), a mesh pipeline (7.29: row-vector matrices, Y flip, counter-clockwise front faces, 128-byte push constants), and a textured-quad pipeline with alpha blending for the splash, text and overlays.
+- `VkText.cs`: SDL_ttf text and the licence splash as RGBA (7.31).
+- `SnapshotRun.cs`: off-screen render and read-back (7.29's variant), so `--snapshot` needs a GPU but no window.
+
 ## Packages
 
 Column key: **H** = headless (no window or GPU needed); **Gen** = generated bindings (`*.gen.cs`), **Hand** = hand-written, **Manual** = hand-written ergonomics over generated code.

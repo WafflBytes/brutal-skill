@@ -6,7 +6,7 @@ A game on the BRUTAL C# framework, started from the `brutal-game` skeleton with 
 
 ## What to change
 
-- `Sim/World.cs` and `Sim/Input.cs`: your game state, rules and input. Pure C#, deterministic, fixed 1/60 s step. **No SDL or GL types in `Sim/`** (skill rule R6), so it runs in the self-test. For 3D physics add `Ahwoo.BRUTAL.Jolt` and follow the skill's `jolt.md` (recipes 7.6, 7.27, 7.34, 7.44). Jolt also needs `msvcp140.dll` added to `NativeDialog.RequiredVcRuntimeDlls` (T41).
+- `Sim/World.cs` and `Sim/Input.cs`: your game state, rules and input. Pure C#, deterministic, fixed 1/60 s step. **No SDL or GL types in `Sim/`** (skill rule R6), so it runs in the self-test. For 3D physics add `Ahwoo.BRUTAL.Jolt` and follow the skill's `jolt.md` (recipes 7.6, 7.27, 7.34, 7.44).
 - `Platform/Gl/Renderer.cs`: `DrawScene` (camera, meshes, lighting) and `DrawHud`; `View` is what a frame needs from the world, interpolated between fixed steps. Keep `DrawSplash` and the pause overlay. Text: create a `GlText.Label` once in the constructor, call `Text(...)` every frame.
 - `Platform/Gl/App.cs`: new keys in `OnKeyPressed`/`ReadInput`, sounds in `FixedStep`, and a scripted check in `SmokeScript` when you add input.
 - `SelfTest.cs`: one check per rule you add. `Platform/Gl/SnapshotRun.cs`: the scripted shots, if your game needs other inputs to show its screens.

@@ -137,3 +137,24 @@ Changes:
 - Architecture lines that the skeleton already covers were trimmed, and "Jolt, using only the exported subset" is gone (no gaps since 2026.10.4). SKILL.md is now 17,357 bytes.
 
 Not run: a new eval to measure the effect of the test budget on tokens.
+
+2026-11-01, Vulkan skeleton: `dotnet new brutal-game --renderer vulkan` generates `Platform/Vk/`, a GLFW window and Vulkan 1.3 with the same placeholder, licence splash, pause overlay and test modes as the other renderers.
+- Why: in eval iteration 3 the Vulkan run read `vulkan.md` whole (29k characters), then three Sandbox programs (about 80k), plus 39k of grep output, and assembled the project by hand.
+- Built from the iteration-3 Vulkan cube and recipes 7.11, 7.13, 7.29, 7.30 and 7.31:
+  - `VkGpu`: instance, GPU pick, device, buffers, texture upload, ShaderC.
+  - `Renderer`: one colour + depth render pass, a mesh pipeline with 128-byte push constants, and a quad pipeline with alpha blending; textures from `VkText`.
+  - `App`: the 7.13 swapchain, 2 frames in flight, the fixed-step loop, and `--smoke` posting WM_KEYDOWN/UP to the GLFW window.
+  - `SnapshotRun`: off-screen render and read-back, so it needs a GPU but no window.
+- `NativeDialog.RequiredVcRuntimeDlls` now always includes `msvcp140.dll` (ShaderC needs it; all three DLLs ship in one redistributable).
+- `check-template.ps1 -Renderer vulkan` passes:
+  - ASCII sources and a warning-free build on the first try;
+  - `--selftest` 6/6;
+  - 6 snapshots, the same image as the GL variant (checked by eye: lit cube on the floor, culling and depth right, pause overlay);
+  - `--smoke 4` 6/6, with one swapchain rebuild on resize to 1600x900;
+  - publish 41.7 MB with 10 notice files;
+  - the published exe runs `--selftest` and `--snapshot` from an empty folder;
+  - crash dialog and log, and the VC++ runtime dialog.
+- sdl and gl re-checked after the shared changes: both OK.
+- `verify.ps1` runs all three (`-NoVulkan` skips the Vulkan one). `vulkan.md` now opens by pointing at the skeleton and mapping its files to the recipes; `SKILL.md` says to start Vulkan games from it.
+
+Not run: Vulkan on Linux or macOS, and a GPU without the R8G8B8A8/B8G8R8A8 UNorm surface formats.

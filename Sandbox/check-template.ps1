@@ -1,10 +1,10 @@
-# End-to-end check of the brutal-game skeleton (default -Renderer sdl; -Renderer gl for OpenGL): dotnet new -> build -> --selftest -> --snapshot -> (--smoke) ->
+# End-to-end check of the brutal-game skeleton (default -Renderer sdl; -Renderer gl or vulkan): dotnet new -> build -> --selftest -> --snapshot -> (--smoke) ->
 # single-file publish -> run the published exe from an empty folder (selftest, snapshot, crash dialog + log). Uses a throwaway template hive, so nothing
 # is installed for the user. Exit code = number of failed steps.
-#   powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1 [-Renderer sdl|gl] [-NoWindow] [-NoDialog] [-Keep]
+#   powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1 [-Renderer sdl|gl|vulkan] [-NoWindow] [-NoDialog] [-Keep]
 # -NoWindow skips --smoke (needs a display). -NoDialog skips the two message-box checks (need an interactive desktop;
 # CI) but still checks error.log. Skipped steps print SKIP. -Keep leaves the generated project in the temp folder for inspection.
-param([ValidateSet('sdl', 'gl')][string]$Renderer = 'sdl', [switch]$NoWindow, [switch]$NoDialog, [switch]$Keep)
+param([ValidateSet('sdl', 'gl', 'vulkan')][string]$Renderer = 'sdl', [switch]$NoWindow, [switch]$NoDialog, [switch]$Keep)
 
 # Per renderer: the project name to generate and what its outputs must contain. The template's sourceName is BrutalGame.
 $Template = 'brutal-game'
@@ -13,6 +13,8 @@ $cfg = @{
         Notices = 'Sdl, Sdl.Ttf, Sdl.Mixer, Stb'; MinNotices = 6 }
     'gl'  = @{ Source = 'BrutalGame'; Name = 'SkeletonGl'; Shots = 6; Smoke = 4; SnapshotNeedsDisplay = $true # hidden GL window
         Notices = 'OpenGl, Sdl, Sdl.Ttf, Sdl.Mixer, Stb'; MinNotices = 7 }
+    'vulkan' = @{ Source = 'BrutalGame'; Name = 'SkeletonVk'; Shots = 6; Smoke = 4; SnapshotNeedsDisplay = $true # needs a Vulkan GPU, not a window
+        Notices = 'Glfw, ShaderC, Vulkan, Vulkan.Abstractions, Sdl, Sdl.Ttf, Sdl.Mixer, Stb'; MinNotices = 10 }
 }[$Renderer]
 
 $ErrorActionPreference = 'Continue'
@@ -50,8 +52,8 @@ try {
     if ($leftover) { Write-Host "   '$($cfg.Source)' left in: $($leftover | ForEach-Object { "$($_.Path):$($_.LineNumber)" })"; $failed++ }
     if (-not (Test-Path (Join-Path $proj "$projName.csproj"))) { Write-Host "   $projName.csproj missing"; $failed++ }
     # Only the chosen renderer's files: one Platform/<renderer> folder and one CLAUDE.md.
-    $other = if ($Renderer -eq 'sdl') { 'Gl' } else { 'Sdl' }
-    $wrong = @(@("Platform\$other", 'CLAUDE.sdl.md', 'CLAUDE.gl.md') | Where-Object { Test-Path (Join-Path $proj $_) })
+    $others = @{ sdl = 'Gl', 'Vk'; gl = 'Sdl', 'Vk'; vulkan = 'Sdl', 'Gl' }[$Renderer]
+    $wrong = @(@($others | ForEach-Object { "Platform\$_" }) + @('CLAUDE.sdl.md', 'CLAUDE.gl.md', 'CLAUDE.vk.md') | Where-Object { Test-Path (Join-Path $proj $_) })
     if ($wrong -or -not (Test-Path (Join-Path $proj 'CLAUDE.md'))) { Write-Host "   renderer files wrong: unexpected $($wrong -join ', '); CLAUDE.md present $(Test-Path (Join-Path $proj 'CLAUDE.md'))"; $failed++ }
     else { Write-Host "-- only the $Renderer platform files were generated" }
 
@@ -63,7 +65,7 @@ try {
                 $b | Select-Object -Last 3 })
         {
             Step '--selftest' { dotnet run -c Release --no-build -- --selftest } | Out-Null
-            if ($NoWindow -and $cfg.SnapshotNeedsDisplay) { Write-Host '-- --snapshot: SKIP (-NoWindow; renders through a hidden GL window)' }
+            if ($NoWindow -and $cfg.SnapshotNeedsDisplay) { Write-Host '-- --snapshot: SKIP (-NoWindow; needs a hidden GL window or a Vulkan GPU)' }
             else {
                 Step '--snapshot' { dotnet run -c Release --no-build -- --snapshot snapshots } | Out-Null
                 $pngs = @(Get-ChildItem snapshots -Filter *.png -ErrorAction SilentlyContinue).Count

@@ -10,11 +10,11 @@ public static partial class NativeDialog
     public const string VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe";
 
     /// <summary>
-    /// The Visual C++ runtime DLLs this game's BRUTAL native libraries import (skill trap T41). SDL3, SDL_ttf,
-    /// SDL_mixer and stb need the first two. If you add Jolt, RakNet, ShaderC, VMA, Ktx, Gli or Slang, add
-    /// "msvcp140.dll" too: they import it, and without the check a missing runtime closes the game silently.
+    /// The Visual C++ runtime DLLs BRUTAL's native libraries import (skill trap T41). SDL3, SDL_ttf, SDL_mixer and
+    /// stb need the first two; Jolt, RakNet, ShaderC, VMA, Ktx, Gli and Slang also import msvcp140.dll. All three come
+    /// in the same Visual C++ Redistributable, so checking all of them costs nothing and covers packages you add later.
     /// </summary>
-    public static readonly string[] RequiredVcRuntimeDlls = ["vcruntime140.dll", "vcruntime140_1.dll"];
+    public static readonly string[] RequiredVcRuntimeDlls = ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"];
 
     /// <summary>True when every DLL in <see cref="RequiredVcRuntimeDlls"/> can be loaded.</summary>
     public static bool VcRuntimeInstalled()

@@ -33,5 +33,6 @@ SIL Open Font License 1.1 (see OFL-AtkinsonHyperlegible.txt).
 Portions of this software are copyright (c) 2023 The FreeType Project (https://freetype.org).
 All rights reserved. This software is based in part on the work of the FreeType Team.
 
-Other third-party notices (SDL3, SDL_ttf, HarfBuzz, SDL_mixer, stb, the .NET runtime) are in the
+Third-party notices for the libraries inside the game (SDL3, SDL_ttf, HarfBuzz, SDL_mixer, stb and,
+depending on the build, OpenGL, GLFW, Vulkan or shaderc) and for the .NET runtime are in the
 licenses folder.

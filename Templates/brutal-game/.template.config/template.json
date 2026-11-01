@@ -1,10 +1,10 @@
 {
   "$schema": "http://json.schemastore.org/template",
   "author": "WafflBytes",
-  "classifications": ["Game", "BRUTAL", "SDL", "OpenGL"],
+  "classifications": ["Game", "BRUTAL", "SDL", "OpenGL", "Vulkan"],
   "identity": "Brutal.Templates.Game",
   "name": "BRUTAL game skeleton",
-  "description": "An empty BRUTAL game with the plumbing done: licence splash (logo + credits), NOTICE and third-party notices, single-file publish, crash and VC++ runtime dialogs, a fixed-step loop, TrueType text, SDL_mixer sound, --selftest, --snapshot and --smoke. A placeholder marker stands in for your game. --renderer sdl (2D SDL renderer, default) or gl (SDL3 window + OpenGL 4.1 core).",
+  "description": "An empty BRUTAL game with the plumbing done: licence splash (logo + credits), NOTICE and third-party notices, single-file publish, crash and VC++ runtime dialogs, a fixed-step loop, TrueType text, SDL_mixer sound, --selftest, --snapshot and --smoke. A placeholder marker stands in for your game. --renderer sdl (2D SDL renderer, default), gl (SDL3 window + OpenGL 4.1 core) or vulkan (GLFW + Vulkan 1.3).",
   "shortName": "brutal-game",
   "sourceName": "BrutalGame",
   "preferNameDirectory": true,
@@ -20,7 +20,8 @@
       "description": "How the game draws.",
       "choices": [
         { "choice": "sdl", "description": "SDL3 2D renderer: sprites, shapes, pixel art. Runs anywhere, including Remote Desktop." },
-        { "choice": "gl", "description": "SDL3 window with an OpenGL 4.1 core context (GLAD): 3D, shaders." }
+        { "choice": "gl", "description": "SDL3 window with an OpenGL 4.1 core context (GLAD): 3D, shaders." },
+        { "choice": "vulkan", "description": "GLFW window + Vulkan 1.3 (swapchain, depth, ShaderC): 3D at full control. Needs a Vulkan driver." }
       ]
     }
   },
@@ -32,13 +33,18 @@
         },
         {
           "condition": "(renderer == \"sdl\")",
-          "exclude": ["Platform/Gl/**", "CLAUDE.gl.md"],
+          "exclude": ["Platform/Gl/**", "Platform/Vk/**", "CLAUDE.gl.md", "CLAUDE.vk.md"],
           "rename": { "CLAUDE.sdl.md": "CLAUDE.md" }
         },
         {
           "condition": "(renderer == \"gl\")",
-          "exclude": ["Platform/Sdl/**", "CLAUDE.sdl.md"],
+          "exclude": ["Platform/Sdl/**", "Platform/Vk/**", "CLAUDE.sdl.md", "CLAUDE.vk.md"],
           "rename": { "CLAUDE.gl.md": "CLAUDE.md" }
+        },
+        {
+          "condition": "(renderer == \"vulkan\")",
+          "exclude": ["Platform/Sdl/**", "Platform/Gl/**", "CLAUDE.sdl.md", "CLAUDE.gl.md"],
+          "rename": { "CLAUDE.vk.md": "CLAUDE.md" }
         }
       ]
     }
