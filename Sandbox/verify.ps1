@@ -99,16 +99,16 @@ $expected = 'BRUTALCORE0009 BRUTALCORE0010'
 Report 'FixedProbe' ($fineOk -and (($ids -join ' ') -eq $expected)) "accepted patterns ran; error build gave: $($ids -join ', ')"
 dotnet build FixedProbe -c Release -nologo -v quiet | Out-Null   # leave a clean build behind
 
-foreach ($tplName in 'brutal-sdl', 'brutal-3d') {
-    Write-Host "== Template $tplName =="
-    $tplArgs = @('-Template', $tplName)
+foreach ($renderer in 'sdl', 'gl') {
+    Write-Host "== Template brutal-game --renderer $renderer =="
+    $tplArgs = @('-Renderer', $renderer)
     if ($NoWindow) { $tplArgs += '-NoWindow' }
     if ($NoDialog) { $tplArgs += '-NoDialog' }
     $tpl = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-template.ps1') @tplArgs
     $tpl | Out-Host
-    $tplSkips = @($(if ($NoWindow) { '--smoke' }), $(if ($NoWindow -and $tplName -eq 'brutal-3d') { '--snapshot (GL)' }), $(if ($NoDialog) { 'crash + VC++ runtime dialogs' }) | Where-Object { $_ })
-    $label = if ($tplName -eq 'brutal-sdl') { 'Template' } else { 'Template3D' }
-    Report $label ($LASTEXITCODE -eq 0) ("dotnet new $($tplName): build, selftest, snapshot, publish, run from empty folder" + $(if ($tplSkips) { "; skipped: $($tplSkips -join ', ')" }))
+    $tplSkips = @($(if ($NoWindow) { '--smoke' }), $(if ($NoWindow -and $renderer -eq 'gl') { '--snapshot (GL)' }), $(if ($NoDialog) { 'crash + VC++ runtime dialogs' }) | Where-Object { $_ })
+    $label = if ($renderer -eq 'sdl') { 'TemplateSdl' } else { 'TemplateGl' }
+    Report $label ($LASTEXITCODE -eq 0) ("dotnet new brutal-game --renderer $($renderer): build, selftest, snapshot, publish, run from empty folder" + $(if ($tplSkips) { "; skipped: $($tplSkips -join ', ')" }))
 }
 
 Write-Host '== Skill lint =='

@@ -1,5 +1,5 @@
 // Recipe 7.36: a Dear ImGui renderer on SDL_RenderGeometry (no OpenGL, no window needed). BRUTAL's own renderers
-// are OpenGL and Vulkan only, so a game on the plain SDL renderer (the brutal-sdl template) needs this ~120-line one.
+// are OpenGL and Vulkan only, so a game on the plain SDL renderer (brutal-game --renderer sdl) needs this ~120-line one.
 // Headless test: a software renderer on a surface, synthetic events through SdlImGuiGlue (7.35), pixel checks.
 using Brutal;
 using Brutal.ImGuiApi;

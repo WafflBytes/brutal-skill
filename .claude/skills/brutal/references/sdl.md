@@ -183,7 +183,7 @@ fixed (float* p = buf) SdlMixer.Generate(offline, p, buf.Length * sizeof(float))
 // GetAudioDuration(audio) is in the audio's source sample frames, not ms.
 // Teardown: DestroyTrack, DestroyAudio, DestroyMixer, SdlMixer.Quit.
 ```
-- A working setup is in the `brutal-sdl` template: `Platform/Audio.cs` (device mixer, falls back to silence when `CreateMixerDevice` throws, an offline mixer for `--selftest`), `Platform/TextRenderer.cs` and `Platform/Resources.cs`.
+- A working setup is in the game skeleton (`Templates/brutal-game`): `Platform/Audio.cs` (device mixer, falls back to silence when `CreateMixerDevice` throws, an offline mixer for `--selftest`), `Platform/Sdl/TextRenderer.cs` and `Platform/Resources.cs`.
 - Callbacks run on SDL_mixer's audio thread. Exceptions thrown in them are parked and rethrown by the next ergonomic mixer call; during long device playback call `SdlMixer.ThrowPendingCallbackExceptions()` once per frame [SRC].
 
 ### 7.24 Gamepads, with a virtual pad for tests [RUN]
@@ -214,6 +214,26 @@ Sdl.PInvoke.SetHint(Sdl.Constants.HintJoystickAllowBackgroundEvents, "1");   // 
 Sdl.Joystick.DetachVirtualJoystick(id);                 // -> GamepadRemoved
 ```
 
+### 7.45 Typed text: an IP address or name box, and the clipboard [RUN]
+Runnable copy: `RecipeCheck 7.45` (`Sandbox/RecipeCheck/Recipes.TextInput.cs`). Read typed text from `TextInput` events, not from key codes: a Czech or French layout types digits with Shift on the number row, and a text event carries the digit anyway.
+```csharp
+Sdl.Keyboard.StartTextInput(window);                  // when the box gets focus; StopTextInput when it loses it
+// in the event loop:
+case SdlEventType.TextInput:
+    box += Marshal.PtrToStringUTF8((nint)ev.text.text); // UTF-8, may hold several characters; copy it now
+    break;
+case SdlEventType.KeyDown when ev.key.key == SdlKeycode.Backspace && box.Length > 0:
+    box = box[..^1];                                   // editing keys still arrive as KeyDown
+    break;
+// paste (Ctrl+V): no wrapper class, only the raw layer
+var p = Sdl.PInvoke.GetClipboardText();               // SDL allocates the UTF-8
+var pasted = Marshal.PtrToStringUTF8((nint)p) ?? "";
+Sdl.PInvoke.Free(p);                                  // always free it
+```
+- Copy: `Sdl.PInvoke.SetClipboardText(string)` returns a `byte` (non-zero = success); `Sdl.PInvoke.HasClipboardText()` too [RUN]. Writing replaces the user's clipboard, so tests should save and restore it.
+- **Tests:** push a synthetic event with `ev.text.type = SdlEventType.TextInput`, `ev.text.windowID = Sdl.Video.GetWindowID(window)`, `ev.text.text` = NUL-terminated UTF-8 in native memory, then `Sdl.Events.PushEvent(&ev)`. SDL keeps your pointer (T58), so free the memory only after `PollEvent` has returned the event.
+- `SdlKeyboardEvent.mod` is a raw `ushort` with no enum; the masks are `uint` constants: `(ev.key.mod & Sdl.Constants.KmodCtrl) != 0` for either Ctrl (also `KmodShift`, `KmodAlt`) [SRC].
+
 ## Traps
 
 | ID | Trap | Fix |
@@ -227,3 +247,4 @@ Sdl.Joystick.DetachVirtualJoystick(id);                 // -> GamepadRemoved
 | T40 | `SdlMixer.PlayTrack(track, 0)` resets the track's loop count from its options (default 0), so `SetTrackLoops` called **before** it is silently lost and music plays once | Call `SetTrackLoops(track, -1)` **after** `PlayTrack` (or pass loops in the play options) |
 | T48 | While windows exist but none has keyboard focus (a hidden test window, a game alt-tabbed away), SDL3 drops gamepad and joystick input: `GetGamepadButton` stays false and no button events arrive, with every call succeeding. With no window at all, input arrives [RUN] | For tests or games that must read pads in the background, `Sdl.PInvoke.SetHint(Sdl.Constants.HintJoystickAllowBackgroundEvents, "1")` before `Sdl.Init`. A focused game window needs nothing |
 | T34 | `RumbleGamepadTriggers` returns `false` on many connections (Bluetooth / XInput have no trigger motors); `RumbleGamepad` works [RUN: Xbox Series X] | Check the bool once and fall back to the body motors |
+| T58 | `Sdl.Events.PushEvent` doesn't copy a pushed `TextInput` event's text: the polled event points at **your** buffer. Freeing or reusing it before `PollEvent` returns the event gives garbage or a crash [RUN: 7.45] | Keep the UTF-8 buffer alive and unchanged until the event has been polled, then free it |

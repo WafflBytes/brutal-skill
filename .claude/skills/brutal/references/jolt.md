@@ -60,7 +60,7 @@ Jolt.UnregisterTypes(); Factory.DestroyInstance();
 ```
 
 ### 7.27 Jolt body tuning, driving a body, determinism [RUN]
-Checked by `RecipeCheck 7.27`, and used by the `brutal-3d` template.
+Checked by `RecipeCheck 7.27`.
 ```csharp
 using (var bcs = BodyCreationSettings.Create(shape, pos, floatQuat.Identity, MotionType.Dynamic, Moving))
 {

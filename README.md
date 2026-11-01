@@ -26,8 +26,7 @@ Same task (build a Breakout game ready to share), same model, with and without t
 |---|---|
 | `.claude/skills/brutal/` | The skill: `SKILL.md` plus one reference file per library area |
 | `Sandbox/` | Verification tools (`verify.ps1` runs them all, then lints the skill) |
-| `Templates/brutal-sdl/` | 2D starter game template (`dotnet new brutal-sdl`) |
-| `Templates/brutal-3d/` | 3D starter game template: OpenGL + Jolt (`dotnet new brutal-3d`) |
+| `Templates/brutal-game/` | Game skeleton: licence splash, publish, notices, crash dialog, test modes, no game (`dotnet new brutal-game`, `--renderer sdl` or `gl`) |
 | `CLAUDE.md`, `AGENTS.md` | Project instructions for Claude Code and other agents |
 
 Verified against `Ahwoo.BRUTAL.*` 2026.10.x on .NET 10, Windows x64, with the
@@ -72,9 +71,8 @@ export BRUTAL_HOME=<clone>
 ## Starter template
 
 ```powershell
-dotnet new install <clone>/Templates/brutal-sdl     # once per machine
-dotnet new install <clone>/Templates/brutal-3d
-dotnet new brutal-sdl -n MyGame                      # 2D, or: dotnet new brutal-3d -n MyGame
+dotnet new install <clone>/Templates/brutal-game    # once per machine
+dotnet new brutal-game -n MyGame                     # 2D SDL renderer; add --renderer gl for OpenGL
 ```
 
 A folder-installed template is tied to its path. If you move or re-clone the

@@ -97,3 +97,43 @@ Full `Sandbox/verify.ps1` on Windows (RX 7900 XTX) passed 14/14: RecipeCheck 0 f
 2026-10-28, upstream samples: new `Sandbox/SampleCheck.ps1` builds and runs every file in `BRUTAL/samples/Hello` and `Demo` (42 + 8, at `7a3b72d`), and `verify.ps1` runs it as a stage. Windows 11 x64, .NET SDK 10.0.402, AMD RX 7900 XTX. At the verified versions (from `ExportAudit.csproj`): 48 pass, 2 skipped (`HelloNativeFileDialog` waits for a person, `HelloNotCurses` needs a real terminal; 7.41 and 7.43 cover them). The 8 demos and 4 windowed Hello samples were captured with `PrintWindow` and checked by eye: Box2D and Jolt boxes, glTF viewer, ImGui with ImPlot, SDL with Image/Mixer/Ttf, KTX2 mip-tinted floor, the Vulkan triangle (VMA vertex buffer, ShaderC) and the RenderDoc GL triangle; all closed cleanly on `WM_CLOSE`. `HelloFmod` throws `DllNotFoundException` for `fmod` as its header says. This gives first runs for VMA, ImPlot, ImGui.FreeType, ImGui.Abstractions (console), ImGui.Extensions, MeshOptimizer, Render.Mesh, Gli and Strings, and for the Slang request API. With `-Pinned` (upstream's own, older versions) the only failure is `HelloSlang` on Slang 2026.10.1: `failed to load dynamic library 'slang-glslang'`, because a RID-less build leaves the natives in `runtimes/win-x64/native/` (bug B14, fixed in 2026.10.3 by preloading the companions in `Slang.cs`). Two capture problems fixed on the way: `CopyFromScreen` grabbed whatever window was on top (a background process can't take the foreground), and a DPI-unaware PowerShell got scaled client sizes, cropping the image. `verify.ps1`: 15/15 pass (SampleCheck is the new stage). Not run: the Linux CI step (next push), macOS, the dialog and terminal samples.
 
 2026-10-28, Linux CI on the new packages (GitHub Actions `ubuntu-latest`, runs 40710147751 for `1d4dd76` and 40721012305 for `d814a3e`): both jobs pass. RecipeCheck `--no-window --no-vulkan` passes every headless recipe on linux-x64, including 7.34 and 7.44 (Jolt 2026.10.4: constraint casts, character listener, mesh, hull and height-field shapes), 7.40 (Slang 2026.10.3) and 7.43 (NotCurses under GNU screen); 7.32 again falls back to OpenAL's null backend (no audio device). NetSession, AnalyzerDump and FixedProbe pass. SampleCheck `-NoWindow -NoVulkan -NoAudio`: 31 pass, 19 skip on both Windows and Linux. On Linux `HelloSdlTtf` finds a system font and `HelloFmod` fails with `Unable to load shared library 'fmod'` as expected. Harmless differences from Windows: `HelloStrings` builds 34 UTF-8 bytes instead of 35 (`StringBuilder.AppendLine` writes `Environment.NewLine`, LF instead of CRLF), and `HelloMeshOptimizer`'s ACMR differs in the second decimal (random input). `SKILL.md`'s "Verified against" line now says Linux ran on these packages. Not run on Linux: Vulkan, windowed recipes and samples, the templates.
+
+2026-10-31, templates: the two sample-game templates (`brutal-sdl`, a dot-collecting 2D game, and `brutal-3d`, a Jolt ball-rolling coin hunt) are replaced by one skeleton, `Templates/brutal-game`, with no game in it. Why: eval iteration 3 showed `brutal-3d` *was* the roller task (the run took 3 min), so evals measured the template, not the skill. Agents also inherited sample-game details (pause on focus loss, dot text in `CLAUDE.md`), and two full games cost upkeep on every package bump. The skeleton keeps only the plumbing:
+- the licence splash and its timing self-test;
+- NOTICE, the font OFL, package and .NET runtime notices;
+- single-file publish;
+- the crash dialog and log, and the VC++ runtime dialog;
+- the fixed-step loop with pause, focus-loss pause and frame pacing;
+- TrueType text and SDL_mixer with one sound;
+- `--selftest`, `--snapshot` and `--smoke`.
+
+A placeholder marker stands in for the game. `--renderer sdl` (default) generates `Platform/Sdl` (SDL renderer); `--renderer gl` generates `Platform/Gl` (SDL3 window + OpenGL 4.1 core, GLAD, `GlText`, `Mat4`, a lit cube on a floor). Both share `Sim/`, `Program.cs`, `SelfTest.cs`, `Audio`, `NativeDialog` and `Resources`. Template modifiers exclude the other platform and rename `CLAUDE.<renderer>.md` to `CLAUDE.md`; the `.csproj` adds `Ahwoo.BRUTAL.OpenGl` under `<!--#if (renderer == "gl") -->`. Jolt is no longer in a template; `jolt.md` recipes cover it, and the GL `CLAUDE.md` says to add `msvcp140.dll` to the VC++ check with it.
+
+`check-template.ps1` now takes `-Renderer sdl|gl`, also checks that only the chosen platform's files were generated, and runs once per renderer in `verify.ps1`. Both pass:
+- ASCII sources and a warning-free build;
+- `--selftest` 6/6;
+- 6 snapshots (checked by eye: splash with logo and credits, grid with marker, lit cube on floor, pause overlay);
+- `--smoke 4`: 5/5 (sdl) and 6/6 (gl, with the text-rescale check);
+- publish: 38.8 MB (sdl) and 38.9 MB (gl), with 6 and 7 notice files;
+- the published exe runs `--selftest` and `--snapshot` from an empty folder;
+- crash dialog and log, and the VC++ runtime dialog.
+
+VulkanSplash now takes its font from `Templates/brutal-game`. `SKILL.md`, `opengl.md`, `sdl.md`, `shipping.md`, `verification.md`, `jolt.md`, `vulkan.md`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `NOTICE.md` and `Sandbox/README.md` were updated.
+
+2026-11-01, skill optimization from the iteration-3 transcripts. Where the with-skill runs spent output tokens:
+- About half went on thinking. Reading the skill was small: SKILL.md is about 18k characters, plus one reference.
+- On netpong about 40 % of the code written was tests (37-44k of 100-112k characters).
+- The netpong runs looked at 9-10 screenshots, and every one stays in context for the rest of the run.
+
+Changes:
+- `SKILL.md` Verification now sets a hard bar: "that's the whole bar; stop there".
+  - At most 6 snapshots, and read 2 or 3 of them.
+  - No test modes beyond the skeleton's.
+  - For networked games, one two-process run: a join, a short match and one disconnect. Version mismatch, a full host and packet loss only if asked.
+  - The old text made networked games an exception that invited a full harness.
+- Recipe 7.33 marks that minimum, and gains the pattern both netpong runs found for sounds over the network: counters that only go up in the snapshot.
+- New recipe 7.45 (`sdl.md`, `RecipeCheck 7.45`, hidden window): typed text through `TextInput` events (keyboard-layout safe), Backspace via `KeyDown`, and the clipboard through `Sdl.PInvoke` (no wrapper; free with `Sdl.PInvoke.Free`). Clipboard set and get round trip, restoring the user's clipboard afterwards. Passes on Windows.
+- New trap T58 from that recipe: `PushEvent` doesn't copy a synthetic `TextInput` event's text. Overwriting the buffer after the push changed the polled text, so the buffer must live until `PollEvent` returns the event. RecipeCheck fails if SDL starts copying.
+- Architecture lines that the skeleton already covers were trimmed, and "Jolt, using only the exported subset" is gone (no gaps since 2026.10.4). SKILL.md is now 17,357 bytes.
+
+Not run: a new eval to measure the effect of the test budget on tokens.

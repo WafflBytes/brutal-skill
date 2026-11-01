@@ -1,18 +1,19 @@
-# End-to-end check of a starter template (default brutal-sdl; -Template brutal-3d for the 3D one): dotnet new -> build -> --selftest -> --snapshot -> (--smoke) ->
+# End-to-end check of the brutal-game skeleton (default -Renderer sdl; -Renderer gl for OpenGL): dotnet new -> build -> --selftest -> --snapshot -> (--smoke) ->
 # single-file publish -> run the published exe from an empty folder (selftest, snapshot, crash dialog + log). Uses a throwaway template hive, so nothing
 # is installed for the user. Exit code = number of failed steps.
-#   powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1 [-Template brutal-sdl|brutal-3d] [-NoWindow] [-NoDialog] [-Keep]
+#   powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1 [-Renderer sdl|gl] [-NoWindow] [-NoDialog] [-Keep]
 # -NoWindow skips --smoke (needs a display). -NoDialog skips the two message-box checks (need an interactive desktop;
 # CI) but still checks error.log. Skipped steps print SKIP. -Keep leaves the generated project in the temp folder for inspection.
-param([ValidateSet('brutal-sdl', 'brutal-3d')][string]$Template = 'brutal-sdl', [switch]$NoWindow, [switch]$NoDialog, [switch]$Keep)
+param([ValidateSet('sdl', 'gl')][string]$Renderer = 'sdl', [switch]$NoWindow, [switch]$NoDialog, [switch]$Keep)
 
-# Per template: its sourceName, the project name to generate, and what its outputs must contain.
+# Per renderer: the project name to generate and what its outputs must contain. The template's sourceName is BrutalGame.
+$Template = 'brutal-game'
 $cfg = @{
-    'brutal-sdl' = @{ Source = 'BrutalGame'; Name = 'DotChaser'; Shots = 6; Smoke = 4; SnapshotNeedsDisplay = $false
+    'sdl' = @{ Source = 'BrutalGame'; Name = 'SkeletonSdl'; Shots = 6; Smoke = 4; SnapshotNeedsDisplay = $false
         Notices = 'Sdl, Sdl.Ttf, Sdl.Mixer, Stb'; MinNotices = 6 }
-    'brutal-3d'  = @{ Source = 'BrutalGame3D'; Name = 'Marble3D'; Shots = 11; Smoke = 5; SnapshotNeedsDisplay = $true # hidden GL window
-        Notices = 'Jolt, OpenGl, Sdl, Sdl.Ttf, Sdl.Mixer, Stb'; MinNotices = 8 }
-}[$Template]
+    'gl'  = @{ Source = 'BrutalGame'; Name = 'SkeletonGl'; Shots = 6; Smoke = 4; SnapshotNeedsDisplay = $true # hidden GL window
+        Notices = 'OpenGl, Sdl, Sdl.Ttf, Sdl.Mixer, Stb'; MinNotices = 7 }
+}[$Renderer]
 
 $ErrorActionPreference = 'Continue'
 $templateDir = Resolve-Path (Join-Path $PSScriptRoot "..\Templates\$Template")
@@ -42,12 +43,17 @@ try {
     else { Write-Host '-- template sources are ASCII-only' }
 
     if (-not (Step 'install template (temp hive)' { dotnet new install $templateDir --debug:custom-hive $hive | Select-Object -Last 2 })) { exit $failed }
-    if (-not (Step "dotnet new $Template -n $projName" { dotnet new $Template -n $projName -o $proj --debug:custom-hive $hive })) { exit $failed }
+    if (-not (Step "dotnet new $Template --renderer $Renderer -n $projName" { dotnet new $Template --renderer $Renderer -n $projName -o $proj --debug:custom-hive $hive })) { exit $failed }
 
     # sourceName must have been replaced everywhere.
     $leftover = Get-ChildItem $proj -Recurse -File | Select-String -Pattern $cfg.Source -SimpleMatch
     if ($leftover) { Write-Host "   '$($cfg.Source)' left in: $($leftover | ForEach-Object { "$($_.Path):$($_.LineNumber)" })"; $failed++ }
     if (-not (Test-Path (Join-Path $proj "$projName.csproj"))) { Write-Host "   $projName.csproj missing"; $failed++ }
+    # Only the chosen renderer's files: one Platform/<renderer> folder and one CLAUDE.md.
+    $other = if ($Renderer -eq 'sdl') { 'Gl' } else { 'Sdl' }
+    $wrong = @(@("Platform\$other", 'CLAUDE.sdl.md', 'CLAUDE.gl.md') | Where-Object { Test-Path (Join-Path $proj $_) })
+    if ($wrong -or -not (Test-Path (Join-Path $proj 'CLAUDE.md'))) { Write-Host "   renderer files wrong: unexpected $($wrong -join ', '); CLAUDE.md present $(Test-Path (Join-Path $proj 'CLAUDE.md'))"; $failed++ }
+    else { Write-Host "-- only the $Renderer platform files were generated" }
 
     Push-Location $proj
     try {
@@ -128,5 +134,5 @@ finally {
     else { Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue }
 }
 
-Write-Host $(if ($failed -eq 0) { "Template check ($Template): OK" } else { "Template check ($Template): $failed step(s) failed" })
+Write-Host $(if ($failed -eq 0) { "Template check ($Template, $Renderer): OK" } else { "Template check ($Template, $Renderer): $failed step(s) failed" })
 exit $failed

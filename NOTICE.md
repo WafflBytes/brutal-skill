@@ -20,16 +20,16 @@ taken from that source.
 Games and tools built on BRUTAL must meet the BRUTAL License conditions:
 credits notice, the BRUTAL logo before gameplay, and `NOTICE.txt` shipped
 alongside the product. See `.claude/skills/brutal/references/shipping.md`.
-The starter template in `Templates/brutal-sdl/` already does this.
+The game skeleton in `Templates/brutal-game/` already does this.
 
 ## Third-party files in the template
 
-- `Templates/brutal-sdl/Assets/Fonts/AtkinsonHyperlegible-Bold.ttf`: SIL Open
+- `Templates/brutal-game/Assets/Fonts/AtkinsonHyperlegible-Bold.ttf`: SIL Open
   Font License 1.1 (`OFL.txt` alongside).
-- `Templates/brutal-sdl/Assets/logo.png`: the official BRUTAL logo, a
+- `Templates/brutal-game/Assets/logo.png`: the official BRUTAL logo, a
   byte-for-byte copy of `docs/branding/LOGO_BRUTAL_WHT.png` in the BRUTAL
   repository (also at ahwoo.com/brutal-branding). It is Ahwoo's asset and is
   redistributed here under the BRUTAL License, which requires games built on
   BRUTAL to display it. Don't alter it except for scaling.
-- `Templates/brutal-sdl/Assets/Sounds/*.wav`: AI-generated for this template
+- `Templates/brutal-game/Assets/Sounds/*.wav`: AI-generated for this template
   by WafflBytes, released under the same MIT licence as this repository.

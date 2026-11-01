@@ -62,7 +62,7 @@ A distributed product **must**:
    </Target>
    ```
    In a `dotnet new` template, don't put conditions like `'%(X.Y)' == 'literal'` in a `Condition` attribute: the template engine evaluates `Condition` attributes when it instantiates the project and silently deletes elements it judges false [RUN]. Use item functions such as `WithMetadataValue` instead.
-7. **Fonts and other assets** carry their own licences. Sdl.Ttf ships no font (T39). An SIL OFL font may be embedded and redistributed if its `OFL.txt` ships with the product. The `brutal-sdl` template does all of this: it embeds Atkinson Hyperlegible, ships `OFL-AtkinsonHyperlegible.txt` and `licenses/`, and credits everything in its README.
+7. **Fonts and other assets** carry their own licences. Sdl.Ttf ships no font (T39). An SIL OFL font may be embedded and redistributed if its `OFL.txt` ships with the product. The `brutal-game` skeleton does all of this: it embeds Atkinson Hyperlegible, ships `OFL-AtkinsonHyperlegible.txt` and `licenses/`, and credits everything in its README.
 
 ## Traps
 
@@ -77,11 +77,11 @@ A distributed product **must**:
 - **Check for the VC++ runtime at start-up (T41).** Before the first SDL call, `NativeLibrary.TryLoad("vcruntime140.dll", ...)` and `vcruntime140_1.dll`; if either fails, show a dialog with the official download link (`https://aka.ms/vs/17/release/vc_redist.x64.exe`) and exit.
 - **Crash reporting.** The published exe is `WinExe` (no console), so an unhandled exception just closes the window. Catch it in play mode, write a log under `%LOCALAPPDATA%\<Game>\error.log` (the exe's folder may be read-only), and show a **Win32** `MessageBoxW` via `[LibraryImport("user32.dll")]` [RUN]. Don't use `Sdl.PInvoke.ShowSimpleMessageBox` here: if the error is SDL failing to load, SDL's dialog fails too and the game closes silently.
 - **Credits with no text renderer:** recipe 7.31 (`vulkan.md`). Repeat them in the player README.
-- **The VC++ check must cover every runtime DLL your packages import (T41).** The `brutal-sdl` template checks `vcruntime140` and `vcruntime140_1`; add `msvcp140` when you add Jolt, RakNet, ShaderC, VMA, Ktx, Gli or Slang (`brutal-3d` does, for Jolt). Edit `NativeDialog.RequiredVcRuntimeDlls`.
+- **The VC++ check must cover every runtime DLL your packages import (T41).** The skeleton checks `vcruntime140` and `vcruntime140_1`; add `msvcp140` when you add Jolt, RakNet, ShaderC, VMA, Ktx, Gli or Slang. Edit `NativeDialog.RequiredVcRuntimeDlls`.
 - **A player README.txt beside the exe:** controls, credits (including the FreeType line), the VC++ runtime requirement (T41), and a SmartScreen note for unsigned exes ("More info", then "Run anyway").
 - **One zip** of the publish folder is the easiest thing to send.
 - **Pause on focus loss**, so Alt-Tab doesn't cost a life.
-- The `brutal-sdl` template does all of the above; `Sandbox/check-template.ps1` checks the crash dialog and log, the missing-runtime dialog (`--vcruntime-test`), and every licence file on the published exe.
+- The `brutal-game` skeleton does all of the above (both renderers); `Sandbox/check-template.ps1` checks the crash dialog and log, the missing-runtime dialog (`--vcruntime-test`), and every licence file on the published exe.
 
 ## Tooling note: keep files ASCII
 

@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "WafflBytes",
+  "classifications": ["Game", "BRUTAL", "SDL", "OpenGL"],
+  "identity": "Brutal.Templates.Game",
+  "name": "BRUTAL game skeleton",
+  "description": "An empty BRUTAL game with the plumbing done: licence splash (logo + credits), NOTICE and third-party notices, single-file publish, crash and VC++ runtime dialogs, a fixed-step loop, TrueType text, SDL_mixer sound, --selftest, --snapshot and --smoke. A placeholder marker stands in for your game. --renderer sdl (2D SDL renderer, default) or gl (SDL3 window + OpenGL 4.1 core).",
+  "shortName": "brutal-game",
+  "sourceName": "BrutalGame",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "renderer": {
+      "type": "parameter",
+      "datatype": "choice",
+      "defaultValue": "sdl",
+      "description": "How the game draws.",
+      "choices": [
+        { "choice": "sdl", "description": "SDL3 2D renderer: sprites, shapes, pixel art. Runs anywhere, including Remote Desktop." },
+        { "choice": "gl", "description": "SDL3 window with an OpenGL 4.1 core context (GLAD): 3D, shaders." }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": ["bin/**", "obj/**", "snapshots/**", "publish/**", ".template.config/**"]
+        },
+        {
+          "condition": "(renderer == \"sdl\")",
+          "exclude": ["Platform/Gl/**", "CLAUDE.gl.md"],
+          "rename": { "CLAUDE.sdl.md": "CLAUDE.md" }
+        },
+        {
+          "condition": "(renderer == \"gl\")",
+          "exclude": ["Platform/Sdl/**", "CLAUDE.sdl.md"],
+          "rename": { "CLAUDE.gl.md": "CLAUDE.md" }
+        }
+      ]
+    }
+  ]
+}

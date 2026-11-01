@@ -13,7 +13,7 @@ BRUTAL (Ahwoo / RocketWerkz) is a set of C# bindings and helpers for writing gam
 
 What's in it:
 - `BRUTAL/`: a clone of https://github.com/ahwootech/BRUTAL, the source of all 50 packages (no project files), plus runnable `samples/`. Search it; don't edit it. If it's missing: `git clone https://github.com/ahwootech/BRUTAL BRUTAL` in BRUTAL home.
-- `Templates/brutal-sdl/`: the starter game template (see "Starting a new game").
+- `Templates/brutal-game/`: the game skeleton (see "Starting a new game").
 - `Sandbox/`: verification tools. `Sandbox/verify.ps1` runs them all (`references/verification.md`).
 - `%NUGET%` = `%USERPROFILE%\.nuget\packages`.
 
@@ -26,7 +26,7 @@ What's in it:
 ## How to use this skill
 
 1. Follow the rules below; they prevent the failures that cost the most time.
-2. **New game? Start from a template** ("Starting a new game") and read its generated `CLAUDE.md`. The template already does the publish settings, licence, splash, crash dialog and verify modes, so skip `shipping.md` and `verification.md` unless you change those.
+2. **New game? Start from the skeleton** ("Starting a new game") and read its generated `CLAUDE.md`. It already does the publish settings, licence, splash, crash dialog and verify modes, so skip `shipping.md` and `verification.md` unless you change those.
 3. Read the reference file only for each library you **add or change** (table below). Each holds that area's packages, C-to-BRUTAL names, source locations, verified recipes, traps and bugs. For a single name, search (lookup protocol) instead of reading a whole file. For one recipe, search the file for `^#` to get the section line numbers, then read its name-translation section, that recipe and its Traps table only.
 4. Start from a [RUN] recipe rather than writing from memory.
 5. Check `references/traps.md` before calling an API; read the full entry in the named file.
@@ -51,7 +51,7 @@ What's in it:
 | You're working on | Read |
 |---|---|
 | Pointers, `Mem`, `NativeList`, Numerics maths, logging, jobs, localization, crash monitor, any BRUTALCORE analyzer | `references/core-libs.md` |
-| SDL3 window, 2D renderer, pixel buffer, input, gamepad, screenshots; images (Sdl.Image), TrueType text (Sdl.Ttf), sound and music (Sdl.Mixer) | `references/sdl.md` |
+| SDL3 window, 2D renderer, pixel buffer, input, typed text and clipboard, gamepad, screenshots; images (Sdl.Image), TrueType text (Sdl.Ttf), sound and music (Sdl.Mixer) | `references/sdl.md` |
 | OpenGL (GLAD) in an SDL window, FBOs, post-processing | `references/opengl.md` (plus `sdl.md`) |
 | GLFW windows, Dear ImGui / ImPlot on GLFW, RenderDoc | `references/glfw-imgui.md` |
 | Dear ImGui inside an SDL3 game (OpenGL or the SDL renderer) | `references/imgui-sdl.md` |
@@ -62,8 +62,8 @@ What's in it:
 | OpenAL, FMOD, choosing an audio path | `references/audio.md` |
 | RakNet networking, NotCurses terminal UI, native file dialogs | `references/misc.md` |
 | Any binding you haven't seen run (export gaps) | `references/export-gaps.md`; to check one name, search `references/export-gaps-detail.txt` |
-| Publishing a single-file exe, the licence (not needed when the template's publish is unchanged) | `references/shipping.md` |
-| Self-tests, snapshots, Sandbox tools, upgrading packages (beyond the template's own checks) | `references/verification.md` |
+| Publishing a single-file exe, the licence (not needed when the skeleton's publish is unchanged) | `references/shipping.md` |
+| Self-tests, snapshots, Sandbox tools, upgrading packages (beyond the skeleton's own checks) | `references/verification.md` |
 | Every known trap and bug, one line each, plus a symptom lookup | `references/traps.md` |
 | Recording a new trap, recipe or verification (only after you found one) | `references/maintaining.md` |
 
@@ -100,9 +100,7 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
 ## Architecture for a new game
 
 - **Layering:** pure-C# simulation (Numerics + Collections) → `Render(Span<uint>)` or vertex building → backend (SDL now, Vulkan later). The backend owns all native handles.
-- **Timestep:** fixed 1/60 s with an accumulator; cap at about 4 steps per frame. With vsync the loop runs at the monitor's rate, not 60 Hz (T33).
-- **Ownership:** one owner per native handle; dispose in reverse creation order.
-- **Input:** paint along a line from the previous to the current mouse position; convert window coordinates with `RenderCoordinatesFromWindow`.
+- **Timestep:** fixed 1/60 s, at most 4 steps per frame; vsync runs at the monitor's rate (T33). The skeleton does this.
 - **Renderer choice:**
   - SDL renderer: pixel/2D games; runs anywhere, including remote sessions.
   - OpenGL in an SDL window: simple 3D, verified end to end.
@@ -110,26 +108,20 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
   - Vulkan + Abstractions + VMA: 3D and high performance.
   - Vulkan compute: GPU compute.
   - NotCurses: terminal.
-- **Physics:** Box2D for 2D; Jolt for 3D, using only the exported subset.
+- **Physics:** Box2D for 2D; Jolt for 3D.
 - **Large worlds:** keep positions in `double3`/`double4x4` and convert with `float3.Pack(in double3, …)` for rendering. There's no floating-origin helper.
 
 ## Starting a new game
 
-Start from a template rather than an empty project. Both are small playable games with the licence (R10), every third-party notice, a crash dialog, a VC++ runtime check, a deterministic fixed-step `Sim/`, `--selftest`, `--snapshot`, `--smoke` and single-file publish already working.
-
-| Template | For | Stack |
-|---|---|---|
-| `Templates/brutal-sdl` | 2D games | SDL3 renderer, SDL_ttf, SDL_mixer, Stb |
-| `Templates/brutal-3d` | 3D games | SDL3 window + OpenGL 4.1 core, Jolt physics (boxes and spheres; rotated boxes for ramps), chase camera, TrueType text and the logo as GL textures, SDL_mixer, gamepad |
+Start from the skeleton rather than an empty project. It has no game, only the plumbing that takes longest to get right: the licence splash (R10) and every third-party notice, single-file publish, a crash dialog, a VC++ runtime check, a fixed-step loop, TrueType text, SDL_mixer sound, `--selftest`, `--snapshot` and `--smoke`. A placeholder marker stands in for the game.
 
 ```text
-dotnet new list brutal                                     # already installed? then skip the installs
-dotnet new install <BRUTAL home>/Templates/brutal-sdl      # once per machine, per template you use
-dotnet new install <BRUTAL home>/Templates/brutal-3d
-dotnet new brutal-sdl -n MyGame -o <folder>/MyGame         # or: dotnet new brutal-3d ...
+dotnet new list brutal                                     # already installed? then skip the install
+dotnet new install <BRUTAL home>/Templates/brutal-game     # once per machine
+dotnet new brutal-game -n MyGame -o <folder>/MyGame        # 2D, SDL renderer; add --renderer gl for OpenGL 4.1 (3D)
 ```
 
-Then replace `Sim/` with your game (keep it free of SDL and GL types) and add a self-test check for each rule. The generated `CLAUDE.md` explains the layout and the verify commands. For an online game, remove the template's pause-on-focus-loss (the other player keeps playing) and test with two processes on 127.0.0.1 (`references/misc.md`).
+Then write your game in `Sim/` (keep it free of SDL and GL types) and its drawing in `Platform/`, and add a self-test check for each rule. The generated `CLAUDE.md` says which files to change. For 3D physics add Jolt (`references/jolt.md`). For an online game, remove pause-on-focus-loss and test with two processes on 127.0.0.1 (`references/misc.md`). For Vulkan, take the skeleton's `.csproj`, `Program.cs` and `Platform/NativeDialog.cs`, and the `Sandbox/Vulkan*` programs (`references/vulkan.md`).
 
 ## Name translation (C/C++ → BRUTAL)
 
@@ -192,7 +184,12 @@ Sources, in priority order:
 4. Every new native call has run at least once.
 5. If it's shared: one publish, run from an empty folder.
 
-Match the effort to the task. Don't build extra harnesses (multi-window bots, thousands of state comparisons) unless the user asks or the feature is networked, and then reuse recipe 7.33's two-process pattern (`misc.md`) rather than writing your own. The template commands are in its `CLAUDE.md`; the Sandbox tools are in `references/verification.md`.
+**That's the whole bar; stop there.** Extra testing was the biggest cost in evals: about 40 % of the code written, for no extra checks passed.
+- At most 6 snapshots, and read 2 or 3 of them. Every image you read stays in context for the rest of the task.
+- No test modes beyond the skeleton's `--selftest`, `--snapshot` and `--smoke`, and no multi-window bots or playtests.
+- Networked: one two-process run (join, a short match, one disconnect), per recipe 7.33. Version mismatch, a full host and packet loss only if the user asks.
+
+The skeleton's commands are in its `CLAUDE.md`; the Sandbox tools are in `references/verification.md`.
 
 ## Not in the repo (don't search for it)
 

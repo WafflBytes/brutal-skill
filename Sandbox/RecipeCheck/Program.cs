@@ -46,6 +46,7 @@ var recipes = new (string Id, string Name, Action Run)[]
     ("7.22", "Box2D contact/hit/sensor events + T42", Recipes.Box2DEventsRecipe),
     ("7.23", "RakNet loopback client/server", Recipes.RakNetRecipe),
     ("7.24", "SDL3 gamepad (virtual device)", Recipes.GamepadRecipe),
+    ("7.45", "SDL3 text input, synthetic text events, clipboard", noWindow ? () => throw new SkipException("--no-window") : Recipes.TextInputRecipe),
     ("7.25", "glTF loaded and drawn with OpenGL", noWindow ? () => throw new SkipException("--no-window") : Recipes.GltfRecipe),
     ("7.26", "Numerics quaternion conventions", Recipes.QuaternionRecipe),
     ("7.27", "Jolt body tuning + determinism", Recipes.JoltTuningRecipe),
