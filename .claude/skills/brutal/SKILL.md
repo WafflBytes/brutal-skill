@@ -104,7 +104,7 @@ Minimal project [RUN]. Setting `RuntimeIdentifier` puts the native DLLs beside t
 - **Renderer choice:**
   - SDL renderer: pixel/2D games; runs anywhere, including remote sessions.
   - OpenGL in an SDL window: simple 3D, verified end to end.
-  - ImGui (GLFW + OpenGL/Vulkan): debug UI.
+  - ImGui: debug UI, on GLFW (`glfw-imgui.md`) or in an SDL game (`imgui-sdl.md`).
   - Vulkan + Abstractions + VMA: 3D and high performance.
   - Vulkan compute: GPU compute.
   - NotCurses: terminal.

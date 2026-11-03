@@ -158,3 +158,11 @@ Not run: a new eval to measure the effect of the test budget on tokens.
 - `verify.ps1` runs all three (`-NoVulkan` skips the Vulkan one). `vulkan.md` now opens by pointing at the skeleton and mapping its files to the recipes; `SKILL.md` says to start Vulkan games from it.
 
 Not run: Vulkan on Linux or macOS, and a GPU without the R8G8B8A8/B8G8R8A8 UNorm surface formats.
+
+2026-11-03, ImGui arena crash and logical presentation, from eval iteration 4 (`brutal-skill-eval/iteration-4`, results in `iteration-4-report/`). `overlay_with_skill` passed every check, but its overlay never reset `ImString.SharedStorage`. The skill's own 7.21 recipe taught that loop.
+- New trap T59. A test with that overlay's three strings threw `ArgumentOutOfRangeException` after 155,344 frames, on the laptop and again on the desktop. 7.21, 7.35 and 7.36 now reset once per frame, as `samples/Hello/HelloImGui.cs` does.
+- 7.36 now checks that the arena throws when full (708,309 short strings) and that 2,000,000 strings with a reset each are fine.
+- `SdlRenderGeometryBackend` now turns a logical presentation off while drawing and restores it. Before the change, the new check failed with 16,500 lit pixels right of the window at 160x100 on a 320x200 target. After it: 0, and the presentation is restored.
+- `verify.ps1 -NoWindow -NoDialog -NoAudio`: all PASS, VulkanWindow skipped. 7.21 and 7.35 passed separately with their hidden windows.
+
+Not run: a finished game's exe for long enough to hit the arena, a hardware `SDL_Renderer` with a logical presentation, high-DPI, and the windowed and dialog parts of `verify.ps1`.

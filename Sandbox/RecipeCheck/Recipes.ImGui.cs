@@ -58,6 +58,7 @@ static unsafe partial class Recipes
                     if (frame == 4)
                         io.AddMouseButtonEvent(0, false);
                     ImGui.NewFrame();
+                    ImString.SharedStorage.Reset(); // T59: once per frame, or interpolated text fills the arena
 
                     ImGui.SetNextWindowPos(new float2(10, 10));
                     ImGui.SetNextWindowSize(new float2(300, 160));

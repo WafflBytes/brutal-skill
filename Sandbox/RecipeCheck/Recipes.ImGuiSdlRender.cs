@@ -46,6 +46,10 @@ sealed unsafe class SdlRenderGeometryBackend : IRendererBackend
                     UpdateTexture(tex);
             }
 
+        // ImGui works in output pixels. A logical presentation (the SDL skeleton sets one) would scale them: off while drawing.
+        Sdl.Render.GetRenderLogicalPresentation(_renderer, out var logicalW, out var logicalH, out var logicalMode);
+        Sdl.Render.SetRenderLogicalPresentation(_renderer, 0, 0, SdlRendererLogicalPresentation.Disabled);
+
         var clipOff = drawData.DisplayPos;
         for (var n = 0; n < drawData.CmdListsCount; n++)
         {
@@ -94,6 +98,7 @@ sealed unsafe class SdlRenderGeometryBackend : IRendererBackend
             }
         }
         Sdl.Render.SetRenderClipRect(_renderer, null);
+        Sdl.Render.SetRenderLogicalPresentation(_renderer, logicalW, logicalH, logicalMode);
     }
 
     void UpdateTexture(ImTextureDataPtr tex)
@@ -200,6 +205,7 @@ static unsafe partial class Recipes
                     io.DisplayFramebufferScale = float2.One;
                     io.DeltaTime = 1f / 60f;
                     ImGui.NewFrame();
+                    ImString.SharedStorage.Reset(); // T59: once per frame, or interpolated text fills the arena
                     ImGui.SetNextWindowPos(new float2(10, 10));
                     ImGui.SetNextWindowSize(new float2(150, 120)); // narrower than the long text below: tests clipping
                     ImGui.Begin("Debug"u8, ref open);
@@ -307,6 +313,47 @@ static unsafe partial class Recipes
                 Check((imagePixel & 0xFFFFFF) == 0x00FF00, $"ImGui.Image drew your own SdlTexture (pixel 0x{imagePixel:X8}, want green)");
                 Check(callbackCalls == frame && callbackData == 42, $"the draw callback ran once per frame with its user data ({callbackCalls} calls in {frame} frames, data {callbackData})");
                 Check((callbackPixel & 0xFFFFFF) == 0xFF00FF, $"what the callback drew with SDL is in the frame (pixel 0x{callbackPixel:X8}, want magenta)");
+
+                // The SDL skeleton draws through a logical presentation. Left on, it would scale ImGui's window 2x here,
+                // past x = 160 into the area right of the window. The backend must turn it off and restore it.
+                Sdl.Render.SetRenderLogicalPresentation(renderer, W / 2, H / 2, SdlRendererLogicalPresentation.Letterbox);
+                Frame("Frame");
+                Sdl.Render.GetRenderLogicalPresentation(renderer, out var keptW, out var keptH, out var keptMode);
+                var scaled = Sdl.PInvoke.ConvertSurface(target, SdlPixelFormat.Abgr8888);
+                var litRight = 0;
+                for (var y = 0; y < 130; y++)
+                    for (var x = 170; x < W; x++)
+                        if ((*(uint*)((byte*)scaled->pixels + y * scaled->pitch + x * 4) & 0xFFFFFF) != 0)
+                            litRight++;
+                Sdl.PInvoke.DestroySurface(scaled);
+                Sdl.Render.SetRenderLogicalPresentation(renderer, 0, 0, SdlRendererLogicalPresentation.Disabled);
+                Console.WriteLine($"     logical presentation {keptW}x{keptH}: {litRight} lit pixels right of the window");
+                Check(litRight == 0, $"ImGui ignores the game's logical presentation ({litRight} lit pixels right of the window)");
+                Check(keptW == W / 2 && keptH == H / 2 && keptMode == SdlRendererLogicalPresentation.Letterbox, "the backend restored the logical presentation");
+
+                // T59: interpolated text goes into an 8 MB arena that nothing resets. It throws when full, and Reset empties it.
+                ImString.SharedStorage.Reset();
+                var filled = 0;
+                var threw = false;
+                try
+                {
+                    for (; filled < 2_000_000; filled++)
+                    {
+                        ImString text = $"FPS: {filled}";
+                    }
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    threw = true;
+                }
+                ImString.SharedStorage.Reset();
+                for (var i = 0; i < 2_000_000; i++)
+                {
+                    ImString text = $"FPS: {i}";
+                    ImString.SharedStorage.Reset();
+                }
+                Console.WriteLine($"     ImString arena: full after {filled} strings, then 2000000 with a reset each time");
+                Check(threw, "the arena throws when full (T59)");
             }
             finally
             {

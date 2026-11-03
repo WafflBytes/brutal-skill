@@ -74,7 +74,8 @@ while (!window.ShouldClose)
 {
     Glfw.PollEvents();
     renderer.NewFrame(); platform.NewFrame(); ImGui.NewFrame(); // this order
-    ImGui.Begin("Debug"u8);                                     // u8 labels (T14); $"..." interpolation also works
+    ImString.SharedStorage.Reset();                             // every frame, or $"..." text crashes the game later (T59)
+    ImGui.Begin("Debug"u8);                                     // u8 labels (T14)
     ImGui.Text($"FPS {io.Framerate:F0}");
     if (ImGui.Button("Reset"u8, new float2(120, 30))) { /* ... */ }
     ImGui.SliderFloat("Volume"u8, ref volume, 0, 1);
@@ -111,6 +112,7 @@ if (RenderDoc.IsAvailable) RenderDoc.StartFrameCapture(default, default);  // gu
 | T9 | A stock `glfw3.dll` fails; `GlfwWindow` binds fork-only functions (`glfwSetScrollDetailCallback`, trackpad) at `Glfw.Window.cs:610-612` | Use the packaged binary |
 | T22 | ImGui's **shipped** platform backend is GLFW only (no SDL). Renderers: Vulkan, or OpenGL 4.1+ core (GLSL 410) | Use GLFW, or the hand-written SDL glue of 7.35 (`imgui-sdl.md`) with `OpenGlBackend` |
 | T47 | BRUTAL's `OpenGlBackend` and `VulkanBackend` never call `ImDrawList.AddCallback` callbacks, silently (`VulkanBackend.cs:199-215` is a TODO) [RUN: OpenGL; SRC: Vulkan] | Draw custom content outside ImGui (before or after `RenderDrawData`), or use a backend that honours callbacks (7.36, `imgui-sdl.md`) |
+| T59 | **ImGui text in `$"..."` or a `string` goes into `ImString.SharedStorage`, an 8 MB arena that nothing resets.** When it's full, the next string throws `ArgumentOutOfRangeException` ("Cannot grow beyond MaxCapacity"). Three short lines fill it in 155,000 frames: 43 minutes at 60 Hz, 18 at 144 Hz. A bigger UI is sooner, and short test runs pass [RUN: 7.36; `string`: SRC] | Call `ImString.SharedStorage.Reset()` once per frame, right after `ImGui.NewFrame()`, as `samples/Hello/HelloImGui.cs` does. `"..."u8` labels don't use the arena. An `ImString` lasts one frame at most, so don't keep one |
 | T54 | **No RenderDoc call checks that RenderDoc loaded.** Without RenderDoc (every player's machine) every call throws `NullReferenceException` [RUN: 7.42] | Check `RenderDoc.IsAvailable` before each call, or put capture code behind one helper that does |
 
 | ID | Where (under `BRUTAL/`) | Bug | Workaround |
