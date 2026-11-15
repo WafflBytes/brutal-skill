@@ -166,3 +166,12 @@ Not run: Vulkan on Linux or macOS, and a GPU without the R8G8B8A8/B8G8R8A8 UNorm
 - `verify.ps1 -NoWindow -NoDialog -NoAudio`: all PASS, VulkanWindow skipped. 7.21 and 7.35 passed separately with their hidden windows.
 
 Not run: a finished game's exe for long enough to hit the arena, a hardware `SDL_Renderer` with a logical presentation, high-DPI, and the windowed and dialog parts of `verify.ps1`.
+
+2026-11-14, ImGui gaps from the overlay re-run (iteration 4, `iteration-4-report/overlay-rerun/`). The re-run scored 22/22 with the T59 reset and the logical presentation right. Four things it had to work out alone:
+- 7.36 no longer needs `ImGui.Backends`. A project with only ImGui, Sdl, Core and Numerics built the backend and glue with their interfaces removed and drew a window at the right place under a 160x100 logical presentation. No Backends, GLFW, OpenGL or Vulkan DLL was in its output.
+- ImGui 2026.10.3's floors: a direct `Core 2026.10.1` reference failed restore with NU1605. Numerics 2026.10.2 needs Core 2026.10.4 too.
+- The notices target now takes the packages from `RuntimeCopyLocalItems` and `NativeCopyLocalItems`, not `PackageReference`, so it includes packages that come in indirectly. In that project the build and a single-file publish gained the Localization notice that ImGui brings. RecipeCheck's output gained GLI, KTX, Vulkan.Abstractions and ZLib notices that were missing. Changed in `shipping.md`, the skeleton and RecipeCheck.
+- T59 no longer suggests a frame count, because the agent's shorter strings survived 200,000 frames. It now gives a fast test: fill the arena with `$"{0}"` until it throws, then run one frame. 7.36 checks both sides: a frame with the reset survives a full arena, and text without one throws. `$"{"x"}"` would have tripped the BRUTALCORE0011 analyzer warning.
+- `verify.ps1 -NoWindow -NoDialog -NoAudio`: all PASS, VulkanWindow skipped. The three skeletons build, publish and run from an empty folder with the new target.
+
+Not run: 7.21 and 7.35 (they need a window), the skeletons' `--smoke` and dialogs, a finished ImGui game with the new target. The re-run's other notes (slider rectangle, `WantCaptureMouse` timing, older projects) aren't changed.

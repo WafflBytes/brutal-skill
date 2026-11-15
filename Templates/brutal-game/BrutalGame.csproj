@@ -54,13 +54,14 @@
 
   <!--
     Third-party notices for the native libraries inside the BRUTAL packages (SDL, FreeType, HarfBuzz, stb, ...).
-    Several of those licences require their notice to ship with the product, so every referenced Ahwoo.BRUTAL.*
-    package's LICENSES/*.txt is copied to licenses/ in the build and publish output. Adding a package adds its notices.
+    Several of those licences require their notice to ship with the product, so the LICENSES/*.txt of every package
+    whose files ship, direct or not, is copied to licenses/ in the build and publish output. Adding a package adds its notices.
   -->
-  <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">
+  <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolvePackageAssets" Condition="'$(NuGetPackageRoot)' != ''">
     <ItemGroup>
-      <_BrutalPackage Include="@(PackageReference)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('Ahwoo.BRUTAL.'))" />
-      <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/%(_BrutalPackage.Version)/LICENSES/*.txt" />
+      <!-- Every package whose files ship, referenced directly or not: ImGui brings Localization. -->
+      <_BrutalPackage Include="@(RuntimeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)');@(NativeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)')" />
+      <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/LICENSES/*.txt" />
       <!-- Some packages ship the same notice (ImGui and ImGui.Backends): copy each name once, or publish fails (NETSDK1152, T50). -->
       <_BrutalNoticeName Include="@(_BrutalNotice->'%(Filename)%(Extension)')" Source="%(_BrutalNotice.FullPath)" />
     </ItemGroup>

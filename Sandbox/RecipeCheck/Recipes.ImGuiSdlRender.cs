@@ -354,6 +354,36 @@ static unsafe partial class Recipes
                 }
                 Console.WriteLine($"     ImString arena: full after {filled} strings, then 2000000 with a reset each time");
                 Check(threw, "the arena throws when full (T59)");
+
+                // The fast test T59 suggests: fill the arena to the last byte with 1-digit strings, then run a frame.
+                void FillArena()
+                {
+                    try
+                    {
+                        while (true)
+                        {
+                            ImString text = $"{0}";
+                        }
+                    }
+                    catch (ArgumentOutOfRangeException) { }
+                }
+                FillArena();
+                var frameThrew = false;
+                try { Frame("Frame"); }
+                catch (ArgumentOutOfRangeException) { frameThrew = true; }
+                Check(!frameThrew, "T59 test: a frame that resets after NewFrame survives a full arena");
+                FillArena();
+                var textThrew = false;
+                try
+                {
+                    ImString text = $"FPS: {frame}";
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    textThrew = true;
+                }
+                ImString.SharedStorage.Reset();
+                Check(textThrew, "T59 test: on a full arena, the next text without a reset throws");
             }
             finally
             {

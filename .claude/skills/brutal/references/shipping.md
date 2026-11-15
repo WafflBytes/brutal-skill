@@ -33,12 +33,13 @@ A distributed product **must**:
    - Files: `BRUTAL/docs/branding/LOGO_BRUTAL_WHT.png` / `_BLK.png`; official assets at ahwoo.com/brutal-branding.
    - A 2.5 s fade, skippable after 1 s, is fine.
 3. Ship `NOTICE.txt` beside it (2.3); copy `BRUTAL/NOTICE.txt`.
-4. Keep each shipped package's `LICENSES/` notices; watch OpenAL (T30) and FMOD (T21). Most native packages (Sdl, Sdl.Ttf, Sdl.Mixer, Stb, …) carry `LICENSES/BRUTAL-*-THIRD-PARTY-NOTICES.txt`, but **nothing copies them to your output by default**. This target [RUN] copies them for every referenced `Ahwoo.BRUTAL.*` package into `licenses/`, for both build and publish, one copy per file name (T50):
+4. Keep each shipped package's `LICENSES/` notices; watch OpenAL (T30) and FMOD (T21). Most native packages (Sdl, Sdl.Ttf, Sdl.Mixer, Stb, …) carry `LICENSES/BRUTAL-*-THIRD-PARTY-NOTICES.txt`, but **nothing copies them to your output by default**. This target [RUN] copies them into `licenses/` for every package whose files ship, including ones you don't reference directly, for both build and publish, one copy per file name (T50). Taking only your `PackageReference` list misses those: ImGui brings Localization, and its notice went missing [RUN].
    ```xml
-   <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">
+   <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolvePackageAssets" Condition="'$(NuGetPackageRoot)' != ''">
      <ItemGroup>
-       <_BrutalPackage Include="@(PackageReference)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('Ahwoo.BRUTAL.'))" />
-       <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/%(_BrutalPackage.Version)/LICENSES/*.txt" />
+       <!-- Every package whose files ship, referenced directly or not: ImGui brings Localization. -->
+       <_BrutalPackage Include="@(RuntimeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)');@(NativeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)')" />
+       <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/LICENSES/*.txt" />
        <!-- Some packages ship the same notice (ImGui and ImGui.Backends): copy each name once, or publish fails (NETSDK1152, T50). -->
        <_BrutalNoticeName Include="@(_BrutalNotice->'%(Filename)%(Extension)')" Source="%(_BrutalNotice.FullPath)" />
      </ItemGroup>
