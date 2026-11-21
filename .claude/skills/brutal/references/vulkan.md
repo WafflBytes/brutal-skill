@@ -4,6 +4,13 @@ Read this for Vulkan (instance, devices, compute, windowed rendering/swapchain) 
 
 Paths (`BRUTAL/`, `Sandbox/`) are relative to the BRUTAL home folder named in `SKILL.md`. Trap (`T#`) and bug (`B#`) IDs are global; the index is `traps.md`.
 
+**A Vulkan game starts from `dotnet new brutal-game --renderer vulkan`** [RUN: `check-template.ps1 -Renderer vulkan`]. It already has recipes 7.11, 7.13, 7.29, 7.30 and 7.31 working together, so read its generated `CLAUDE.md` and only the recipe sections you need here, not the `Sandbox/Vulkan*` programs. What it contains (`Platform/Vk/`):
+- `App.cs`: a GLFW window, the 7.13 swapchain (resize, minimise, out-of-date), 2 frames in flight, the fixed-step loop and `--smoke` (posts real key messages to the window).
+- `VkGpu.cs`: the instance, picking a GPU (discrete first), the device, host buffers, texture upload, and GLSL to SPIR-V with ShaderC.
+- `Renderer.cs`: one render pass (colour + depth), a mesh pipeline (7.29: row-vector matrices, Y flip, counter-clockwise front faces, 128-byte push constants), and a textured-quad pipeline with alpha blending for the splash, text and overlays.
+- `VkText.cs`: SDL_ttf text and the licence splash as RGBA (7.31).
+- `SnapshotRun.cs`: off-screen render and read-back (7.29's variant), so `--snapshot` needs a GPU but no window.
+
 ## Packages
 
 Column key: **H** = headless (no window or GPU needed); **Gen** = generated bindings (`*.gen.cs`), **Hand** = hand-written, **Manual** = hand-written ergonomics over generated code.
@@ -183,7 +190,7 @@ Runnable copy: `Sandbox/VulkanTexture` (off-screen, no window).
 ### 7.31 Vulkan splash: logo + credits line as a textured quad [RUN]
 The licence's credits notice and unaltered logo (`shipping.md`) in an app with no text renderer. Runnable copy: `Sandbox/VulkanSplash` (off-screen). Upload and sampling are 7.30.
 1. **Compose once on the CPU** into one opaque-black RGBA canvas: the logo with `Stb.Load(path, 4)` (T1: a missing file returns a null image, so check `IsNull()`), the credits with SDL_ttf. Use `LOGO_BRUTAL_WHT.png` on a dark canvas; the logo must stay unaltered, so scale the whole canvas at draw time, never the logo alone.
-2. **Credits text without a window or SDL_Init:** `SdlTtf.Init()`, `SdlTtf.OpenFont(path, 18)`, `SdlTtf.RenderTextBlended(font, text, 0, white)`, `Sdl.PInvoke.ConvertSurface(surface, SdlPixelFormat.Abgr8888)` (RGBA byte order), then copy rows using `rgba->pitch` (SDL may pad rows), `DestroySurface` on both, `CloseFont`, `SdlTtf.Quit()`. Sdl.Ttf ships no font (T39): embed an OFL font (the `brutal-3d` template has one) and ship its `OFL.txt`, or bake `credits.png` once and embed it.
+2. **Credits text without a window or SDL_Init:** `SdlTtf.Init()`, `SdlTtf.OpenFont(path, 18)`, `SdlTtf.RenderTextBlended(font, text, 0, white)`, `Sdl.PInvoke.ConvertSurface(surface, SdlPixelFormat.Abgr8888)` (RGBA byte order), then copy rows using `rgba->pitch` (SDL may pad rows), `DestroySurface` on both, `CloseFont`, `SdlTtf.Quit()`. Sdl.Ttf ships no font (T39): embed an OFL font (the `brutal-game` skeleton has one) and ship its `OFL.txt`, or bake `credits.png` once and embed it.
 3. **Draw:** no vertex buffer. Push constants `{ float4 Rect (x0, y0, x1, y1 in NDC); float4 Params (x = fade) }`; the vertex shader does `gl_Position = vec4(mix(pc.rect.xy, pc.rect.zw, uv), 0, 1)` with uv from `CORNERS[gl_VertexIndex]`, the fragment shader `vec4(texture(tex, vUv).rgb * pc.params.x, 1)`. Letterbox: `scale = min(0.8 * W / canvasW, 0.8 * H / canvasH, 1.5)`, half-size in NDC `(canvasW * scale / W, canvasH * scale / H)`. Recompute it each frame so a resize keeps the aspect ratio.
 4. **Sequence:** fade in and out over a couple of seconds before the first scene frame. There's no Vulkan game template.
 

@@ -42,15 +42,15 @@ Sdl.PInvoke.GLSwapWindow(window);
 - Handle types are record structs: `GlShader`, `GlProgram`, `GlBuffer`, `GlVertexArray`, `GlTexture` (`.Id`); `glBindTexture` takes the raw `uint`.
 - Text without SDL_Renderer: render SDL's 8x8 debug font once into a surface with `Sdl.PInvoke.CreateSoftwareRenderer(Sdl.PInvoke.CreateSurface(128, 48, SdlPixelFormat.Abgr8888))` + `Sdl.Render.RenderDebugText`, then upload `surface->pixels` as a GL texture atlas.
 - Post-processing [RUN]: render into an FBO with `glRenderbufferStorageMultisample` colour (`GL_RGBA8`) + depth (`GL_DEPTH_COMPONENT24`), check `glCheckFramebufferStatus == GL_FRAMEBUFFER_COMPLETE`, resolve with `glBlitFramebuffer` into a texture-backed FBO, then draw a full-screen triangle from `gl_VertexID` (empty VAO) with the effect shader. `GlFramebuffer`/`GlRenderbuffer` are record structs; `default` binds the window.
-- Matrices: the template uses its own column-major `Mat4` (below). Uploading Numerics `float4x4` to GL wasn't run (Vulkan: 7.29).
+- Matrices: the skeleton uses its own column-major `Mat4` (below). Uploading Numerics `float4x4` to GL wasn't run (Vulkan: 7.29).
 
-### The `brutal-3d` template [RUN]
-`Templates/brutal-3d` is a working SDL3 + OpenGL 4.1 core + Jolt game. Copy its pieces rather than rewriting them:
-- `Platform/GlWindow.cs`: context attributes, 4x MSAA with a fallback, `Glad.Initialize` with a rooted loader (T35).
-- `Platform/GlText.cs`: SDL_ttf text rendered to a surface, uploaded as a GL texture, re-rasterised on resize.
-- `Platform/Renderer.cs`, `GlUtil.cs`: shaders, meshes, the logo as a GL texture, lighting, fog, a blob shadow.
-- `Platform/SnapshotRun.cs`: off-screen PNGs through a **hidden** SDL GL window and a framebuffer, read with `glReadPixels` (rows flipped). It needs a display, unlike the SDL renderer's surface-based snapshot.
-- `Platform/Mat4.cs`: column-major matrices for GL upload.
+### The skeleton's GL platform [RUN]
+`dotnet new brutal-game --renderer gl` generates a working SDL3 + OpenGL 4.1 core project (`Templates/brutal-game/Platform/Gl/`). Copy its pieces rather than rewriting them:
+- `GlWindow.cs`: context attributes, 4x MSAA with a fallback, `Glad.Initialize` with a rooted loader (T35).
+- `GlText.cs`: SDL_ttf text rendered to a surface, uploaded as a GL texture, re-rasterised on resize.
+- `Renderer.cs`, `GlUtil.cs`: shaders, a cube mesh, the logo as a GL texture, directional lighting, the HUD.
+- `SnapshotRun.cs`: off-screen PNGs through a **hidden** SDL GL window and a framebuffer, read with `glReadPixels` (rows flipped). It needs a display, unlike the SDL renderer's surface-based snapshot.
+- `Mat4.cs`: column-major matrices for GL upload.
 
 ## Traps
 

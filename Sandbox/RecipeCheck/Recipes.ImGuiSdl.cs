@@ -386,6 +386,7 @@ static unsafe partial class Recipes
                     renderer.NewFrame();
                     platform.NewFrame();
                     ImGui.NewFrame();
+                    ImString.SharedStorage.Reset(); // T59: once per frame, or interpolated text fills the arena
                     ImGui.SetNextWindowPos(new float2(10, 10));
                     ImGui.SetNextWindowSize(new float2(300, 200));
                     ImGui.Begin("Debug"u8);

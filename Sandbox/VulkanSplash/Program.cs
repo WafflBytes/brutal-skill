@@ -122,10 +122,10 @@ static unsafe int Run(string pngOut)
     }
 
     var logoPath = FindUp(Path.Combine("BRUTAL", "docs", "branding", "LOGO_BRUTAL_WHT.png"));
-    var fontPath = FindUp(Path.Combine("Templates", "brutal-3d", "Assets", "Fonts", "AtkinsonHyperlegible-Bold.ttf"));
+    var fontPath = FindUp(Path.Combine("Templates", "brutal-game", "Assets", "Fonts", "AtkinsonHyperlegible-Bold.ttf"));
     if (logoPath == null || fontPath == null)
     {
-        Console.WriteLine("Assets not found: need the BRUTAL/ clone and Templates/brutal-3d above the tool's folder.");
+        Console.WriteLine("Assets not found: need the BRUTAL/ clone and Templates/brutal-game above the tool's folder.");
         return 2;
     }
     var canvas = ComposeSplash(logoPath, fontPath, Credits, CanvasW, CanvasH, LogoTop, CreditsTop);

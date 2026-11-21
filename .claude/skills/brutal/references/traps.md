@@ -2,7 +2,7 @@
 
 One line per known trap (`T#`) and confirmed framework bug (`B#`). The full entry, with its fix, is in the reference file named in the last column. Traps that apply to every library (T8, T10, T12, T13, T14, T16, T17) are in full in `SKILL.md`.
 
-Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T58, B15).
+Scan this before calling an API you haven't used yet. Debugging? Start from the symptom table. Adding an ID: `maintaining.md` (next free IDs: T60, B15).
 
 ## By symptom
 
@@ -24,6 +24,7 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | No sound, or OpenAL throws when opening the device | T45, T40, T38 |
 | An image or texture loads in one format but not another | T37, T32, B10 |
 | `dotnet publish` fails with NETSDK1152 | T50 |
+| Typed text from a pushed (synthetic) SDL event is garbled | T58 |
 | The published exe writes no crash dumps | T52 |
 | No crash-tail log after a crash on Linux | T53 |
 | Slang reports success but the SPIR-V or diagnostics are empty | B11 (Slang older than 2026.10.3) |
@@ -32,6 +33,7 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | The program hangs at start-up with no CPU use | T55 |
 | The process dies from an exception in a job | B5 |
 | ImGui shortcuts or draw callbacks don't work | T49, T47 |
+| ImGui game dies after minutes or hours: `ArgumentOutOfRangeException`, "Cannot grow beyond MaxCapacity" | T59 |
 | Numerics results differ from System.Numerics, or a quaternion is wrong | T19, T43 |
 | Unexpected allocations in a hot loop | T31, B8 |
 
@@ -88,7 +90,9 @@ Scan this before calling an API you haven't used yet. Debugging? Start from the 
 | T54 | Every RenderDoc call throws `NullReferenceException` when RenderDoc isn't loaded; check `IsAvailable` first | glfw-imgui |
 | T55 | NotCurses `Init` blocks (Windows consoles, tmux) or crashes (no terminal) unless the terminal answers its queries | misc |
 | T56 | Jolt `MotorSettings.GetSpringSettings()` returns a copy; write it back with `SetSpringSettings` | jolt |
+| T58 | A pushed SDL `TextInput` event keeps the caller's text pointer: free it only after `PollEvent` | sdl |
 | T57 | Slang proxies are never released by the GC (2026.10.3+): `Slang.Release` each one, children first | vulkan |
+| T59 | ImGui `$"..."` and `string` text fill an 8 MB arena; call `ImString.SharedStorage.Reset()` every frame | glfw-imgui |
 | B1 | `PtrOwner.Reset(new)` leaks the old memory | core-libs |
 | B2 | `NativeList.Insert(ByteSize, byte)` never grows the size | core-libs |
 | B3 | Explicit `INativeList.Capacity` gets/sets the size | core-libs |

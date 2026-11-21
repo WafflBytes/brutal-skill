@@ -104,3 +104,81 @@ Full `Sandbox/verify.ps1` on Windows (RX 7900 XTX) passed 14/14: RecipeCheck 0 f
 - **Script problems found on unchanged `47d5548`, now fixed:** `verify.ps1` started SampleCheck, the template checks and the lint with `powershell`, which pwsh off Windows doesn't have, and reported PASS for all four with exit 0; it now starts them with its own PowerShell and a child that can't start reports FAIL. `SampleCheck.ps1` built with `dotnet build <file>.cs -nologo`, which SDK 10.0.113 treats as an MSBuild project (MSB4025 for all 31 samples); it uses `--nologo` now. Windowed samples always failed off Windows (`CloseMainWindow` does nothing there); they now print SKIP after 6 s unless they exit early or throw. RecipeCheck 7.19 skipped for want of a font (DejaVu sits at `/usr/share/fonts/TTF/` on Arch); Arch and Fedora paths added. ExportAudit and the template checks (win-x64 binaries; with Wine registered through binfmt the template's exe even ran under Wine) now print SKIP off Windows, and `Directory.Build.props` defaults to the host's RID on Linux and macOS.
 - **After the fixes:** `pwsh -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio` exit 0 (9 pass, 8 skip; SampleCheck 31 pass, 19 skip; 7.19 passes with the system font). Under `xvfb-run` with lavapipe, `verify.ps1 -NoDialog -NoAudio` exit 0 (12 pass, 3 skip: ExportAudit and both templates; SampleCheck 34 pass, 16 skip, 12 of them windowed samples that ran 6 s without an exception). With `BRUTAL_TEST_FONT` unset.
 Not run: Windows with these script changes, macOS, a real display (presentation, vsync, input), recipe 7.43 (no GNU screen), the templates on Linux, audio output by ear.
+
+2026-10-31, templates: the two sample-game templates (`brutal-sdl`, a dot-collecting 2D game, and `brutal-3d`, a Jolt ball-rolling coin hunt) are replaced by one skeleton, `Templates/brutal-game`, with no game in it. Why: eval iteration 3 showed `brutal-3d` *was* the roller task (the run took 3 min), so evals measured the template, not the skill. Agents also inherited sample-game details (pause on focus loss, dot text in `CLAUDE.md`), and two full games cost upkeep on every package bump. The skeleton keeps only the plumbing:
+- the licence splash and its timing self-test;
+- NOTICE, the font OFL, package and .NET runtime notices;
+- single-file publish;
+- the crash dialog and log, and the VC++ runtime dialog;
+- the fixed-step loop with pause, focus-loss pause and frame pacing;
+- TrueType text and SDL_mixer with one sound;
+- `--selftest`, `--snapshot` and `--smoke`.
+
+A placeholder marker stands in for the game. `--renderer sdl` (default) generates `Platform/Sdl` (SDL renderer); `--renderer gl` generates `Platform/Gl` (SDL3 window + OpenGL 4.1 core, GLAD, `GlText`, `Mat4`, a lit cube on a floor). Both share `Sim/`, `Program.cs`, `SelfTest.cs`, `Audio`, `NativeDialog` and `Resources`. Template modifiers exclude the other platform and rename `CLAUDE.<renderer>.md` to `CLAUDE.md`; the `.csproj` adds `Ahwoo.BRUTAL.OpenGl` under `<!--#if (renderer == "gl") -->`. Jolt is no longer in a template; `jolt.md` recipes cover it, and the GL `CLAUDE.md` says to add `msvcp140.dll` to the VC++ check with it.
+
+`check-template.ps1` now takes `-Renderer sdl|gl`, also checks that only the chosen platform's files were generated, and runs once per renderer in `verify.ps1`. Both pass:
+- ASCII sources and a warning-free build;
+- `--selftest` 6/6;
+- 6 snapshots (checked by eye: splash with logo and credits, grid with marker, lit cube on floor, pause overlay);
+- `--smoke 4`: 5/5 (sdl) and 6/6 (gl, with the text-rescale check);
+- publish: 38.8 MB (sdl) and 38.9 MB (gl), with 6 and 7 notice files;
+- the published exe runs `--selftest` and `--snapshot` from an empty folder;
+- crash dialog and log, and the VC++ runtime dialog.
+
+VulkanSplash now takes its font from `Templates/brutal-game`. `SKILL.md`, `opengl.md`, `sdl.md`, `shipping.md`, `verification.md`, `jolt.md`, `vulkan.md`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `NOTICE.md` and `Sandbox/README.md` were updated.
+
+2026-11-01, skill optimization from the iteration-3 transcripts. Where the with-skill runs spent output tokens:
+- About half went on thinking. Reading the skill was small: SKILL.md is about 18k characters, plus one reference.
+- On netpong about 40 % of the code written was tests (37-44k of 100-112k characters).
+- The netpong runs looked at 9-10 screenshots, and every one stays in context for the rest of the run.
+
+Changes:
+- `SKILL.md` Verification now sets a hard bar: "that's the whole bar; stop there".
+  - At most 6 snapshots, and read 2 or 3 of them.
+  - No test modes beyond the skeleton's.
+  - For networked games, one two-process run: a join, a short match and one disconnect. Version mismatch, a full host and packet loss only if asked.
+  - The old text made networked games an exception that invited a full harness.
+- Recipe 7.33 marks that minimum, and gains the pattern both netpong runs found for sounds over the network: counters that only go up in the snapshot.
+- New recipe 7.45 (`sdl.md`, `RecipeCheck 7.45`, hidden window): typed text through `TextInput` events (keyboard-layout safe), Backspace via `KeyDown`, and the clipboard through `Sdl.PInvoke` (no wrapper; free with `Sdl.PInvoke.Free`). Clipboard set and get round trip, restoring the user's clipboard afterwards. Passes on Windows.
+- New trap T58 from that recipe: `PushEvent` doesn't copy a synthetic `TextInput` event's text. Overwriting the buffer after the push changed the polled text, so the buffer must live until `PollEvent` returns the event. RecipeCheck fails if SDL starts copying.
+- Architecture lines that the skeleton already covers were trimmed, and "Jolt, using only the exported subset" is gone (no gaps since 2026.10.4). SKILL.md is now 17,357 bytes.
+
+Not run: a new eval to measure the effect of the test budget on tokens.
+
+2026-11-01, Vulkan skeleton: `dotnet new brutal-game --renderer vulkan` generates `Platform/Vk/`, a GLFW window and Vulkan 1.3 with the same placeholder, licence splash, pause overlay and test modes as the other renderers.
+- Why: in eval iteration 3 the Vulkan run read `vulkan.md` whole (29k characters), then three Sandbox programs (about 80k), plus 39k of grep output, and assembled the project by hand.
+- Built from the iteration-3 Vulkan cube and recipes 7.11, 7.13, 7.29, 7.30 and 7.31:
+  - `VkGpu`: instance, GPU pick, device, buffers, texture upload, ShaderC.
+  - `Renderer`: one colour + depth render pass, a mesh pipeline with 128-byte push constants, and a quad pipeline with alpha blending; textures from `VkText`.
+  - `App`: the 7.13 swapchain, 2 frames in flight, the fixed-step loop, and `--smoke` posting WM_KEYDOWN/UP to the GLFW window.
+  - `SnapshotRun`: off-screen render and read-back, so it needs a GPU but no window.
+- `NativeDialog.RequiredVcRuntimeDlls` now always includes `msvcp140.dll` (ShaderC needs it; all three DLLs ship in one redistributable).
+- `check-template.ps1 -Renderer vulkan` passes:
+  - ASCII sources and a warning-free build on the first try;
+  - `--selftest` 6/6;
+  - 6 snapshots, the same image as the GL variant (checked by eye: lit cube on the floor, culling and depth right, pause overlay);
+  - `--smoke 4` 6/6, with one swapchain rebuild on resize to 1600x900;
+  - publish 41.7 MB with 10 notice files;
+  - the published exe runs `--selftest` and `--snapshot` from an empty folder;
+  - crash dialog and log, and the VC++ runtime dialog.
+- sdl and gl re-checked after the shared changes: both OK.
+- `verify.ps1` runs all three (`-NoVulkan` skips the Vulkan one). `vulkan.md` now opens by pointing at the skeleton and mapping its files to the recipes; `SKILL.md` says to start Vulkan games from it.
+
+Not run: Vulkan on Linux or macOS, and a GPU without the R8G8B8A8/B8G8R8A8 UNorm surface formats.
+
+2026-11-03, ImGui arena crash and logical presentation, from eval iteration 4 (`brutal-skill-eval/iteration-4`, results in `iteration-4-report/`). `overlay_with_skill` passed every check, but its overlay never reset `ImString.SharedStorage`. The skill's own 7.21 recipe taught that loop.
+- New trap T59. A test with that overlay's three strings threw `ArgumentOutOfRangeException` after 155,344 frames, on the laptop and again on the desktop. 7.21, 7.35 and 7.36 now reset once per frame, as `samples/Hello/HelloImGui.cs` does.
+- 7.36 now checks that the arena throws when full (708,309 short strings) and that 2,000,000 strings with a reset each are fine.
+- `SdlRenderGeometryBackend` now turns a logical presentation off while drawing and restores it. Before the change, the new check failed with 16,500 lit pixels right of the window at 160x100 on a 320x200 target. After it: 0, and the presentation is restored.
+- `verify.ps1 -NoWindow -NoDialog -NoAudio`: all PASS, VulkanWindow skipped. 7.21 and 7.35 passed separately with their hidden windows.
+
+Not run: a finished game's exe for long enough to hit the arena, a hardware `SDL_Renderer` with a logical presentation, high-DPI, and the windowed and dialog parts of `verify.ps1`.
+
+2026-11-14, ImGui gaps from the overlay re-run (iteration 4, `iteration-4-report/overlay-rerun/`). The re-run scored 22/22 with the T59 reset and the logical presentation right. Four things it had to work out alone:
+- 7.36 no longer needs `ImGui.Backends`. A project with only ImGui, Sdl, Core and Numerics built the backend and glue with their interfaces removed and drew a window at the right place under a 160x100 logical presentation. No Backends, GLFW, OpenGL or Vulkan DLL was in its output.
+- ImGui 2026.10.3's floors: a direct `Core 2026.10.1` reference failed restore with NU1605. Numerics 2026.10.2 needs Core 2026.10.4 too.
+- The notices target now takes the packages from `RuntimeCopyLocalItems` and `NativeCopyLocalItems`, not `PackageReference`, so it includes packages that come in indirectly. In that project the build and a single-file publish gained the Localization notice that ImGui brings. RecipeCheck's output gained GLI, KTX, Vulkan.Abstractions and ZLib notices that were missing. Changed in `shipping.md`, the skeleton and RecipeCheck.
+- T59 no longer suggests a frame count, because the agent's shorter strings survived 200,000 frames. It now gives a fast test: fill the arena with `$"{0}"` until it throws, then run one frame. 7.36 checks both sides: a frame with the reset survives a full arena, and text without one throws. `$"{"x"}"` would have tripped the BRUTALCORE0011 analyzer warning.
+- `verify.ps1 -NoWindow -NoDialog -NoAudio`: all PASS, VulkanWindow skipped. The three skeletons build, publish and run from an empty folder with the new target.
+
+Not run: 7.21 and 7.35 (they need a window), the skeletons' `--smoke` and dialogs, a finished ImGui game with the new target. The re-run's other notes (slider rectangle, `WantCaptureMouse` timing, older projects) aren't changed.

@@ -31,10 +31,11 @@
     <PackageReference Include="Ahwoo.BRUTAL.NotCurses" Version="2026.10.1" />
   </ItemGroup>
   <!-- The licence-copy target from references/shipping.md (checked for OpenAL by T30). -->
-  <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" Condition="'$(NuGetPackageRoot)' != ''">
+  <Target Name="IncludeBrutalThirdPartyNotices" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolvePackageAssets" Condition="'$(NuGetPackageRoot)' != ''">
     <ItemGroup>
-      <_BrutalPackage Include="@(PackageReference)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('Ahwoo.BRUTAL.'))" />
-      <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/%(_BrutalPackage.Version)/LICENSES/*.txt" />
+      <!-- Every package whose files ship, referenced directly or not: ImGui brings Localization. -->
+      <_BrutalPackage Include="@(RuntimeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)');@(NativeCopyLocalItems->'%(NuGetPackageId)/%(NuGetPackageVersion)')" />
+      <_BrutalNotice Include="$(NuGetPackageRoot)$([System.String]::Copy('%(_BrutalPackage.Identity)').ToLowerInvariant())/LICENSES/*.txt" />
       <!-- Some packages ship the same notice (ImGui and ImGui.Backends): copy each name once, or publish fails (NETSDK1152, T50). -->
       <_BrutalNoticeName Include="@(_BrutalNotice->'%(Filename)%(Extension)')" Source="%(_BrutalNotice.FullPath)" />
     </ItemGroup>

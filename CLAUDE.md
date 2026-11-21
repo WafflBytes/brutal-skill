@@ -15,9 +15,9 @@ This folder holds the knowledge base and verification tools for building on the 
   - `AnalyzerDump`: lists the analyzer rules.
   - `FixedProbe`: shows which `[Fixed]` patterns compile.
   - `SampleCheck.ps1`: builds and runs upstream's `BRUTAL/samples` at the verified package versions.
-  - `check-template.ps1`: instantiates the template and builds, tests, publishes and runs it.
+  - `check-template.ps1`: instantiates the skeleton (per renderer) and builds, tests, publishes and runs it.
   - `lint-skill.ps1`: checks trap/bug IDs, the index and file links in the skill.
-- `Templates/brutal-sdl/` (2D) and `Templates/brutal-3d/` (OpenGL + Jolt): the starter game templates (`dotnet new brutal-sdl`, `dotnet new brutal-3d`). They're real projects: build and run them in place, and keep `Sandbox/check-template.ps1 -Template <name>` passing after changes.
+- `Templates/brutal-game/`: the game skeleton (`dotnet new brutal-game [--renderer sdl|gl|vulkan]`): licence splash, publish, notices, crash and VC++ dialogs, fixed-step loop, test modes, and a placeholder marker instead of a game. Its source holds all three renderers (`Platform/Sdl`, `Platform/Gl`, `Platform/Vk`, `CLAUDE.<renderer>.md`), so it doesn't build in place: test it with `Sandbox/check-template.ps1 -Renderer sdl`, `gl` and `vulkan` after every change.
 
 ## Working rules for this folder
 
