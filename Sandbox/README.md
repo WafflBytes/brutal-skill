@@ -20,7 +20,7 @@ Windowed runs on Linux without a display, under Xvfb (`xvfb-run -a -s "-screen 0
 `.github/workflows/verify.yml` runs on every push and pull request to `main` (and by hand from the Actions tab). Both jobs clone ahwootech/BRUTAL at the commit in `SKILL.md`'s "Verified against" line, so `lint-skill.ps1` checks it.
 
 - **windows** (`windows-latest`): `verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio`, failing on a non-zero exit code. Runners have no GPU, and an interactive desktop isn't guaranteed. A non-blocking probe step then runs `check-template.ps1` without flags, to show whether `--smoke` and the dialogs work there.
-- **linux** (`ubuntu-latest`): builds `Sandbox.slnx` for `linux-x64` (the `BrutalRid` environment variable; locally `-p:BrutalRid=linux-x64`), then runs RecipeCheck `--no-window --no-vulkan`, NetSession, the headless samples (`SampleCheck.ps1 -NoWindow -NoVulkan -NoAudio`), AnalyzerDump, FixedProbe and the skill lint under `pwsh`. Not run there: Vulkan, ExportAudit (it audits the win-x64 DLLs, which the Windows job covers) and `check-template.ps1` (the template is win-x64 only).
+- **linux** (`ubuntu-latest`): the same `verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio` under `pwsh`, building for `linux-x64` (the `BrutalRid` environment variable; locally the default on Linux), with GNU screen installed for 7.43. ExportAudit (the Windows job covers it) and the skeleton checks (win-x64 only) print SKIP there, and so does Vulkan. Running the script on Linux also guards its own fix: a child script that can't start reports FAIL, not PASS.
 
 Nothing in CI covers a display or a GPU: run the full `verify.ps1` on a desktop before a release.
 

@@ -55,9 +55,10 @@ jobs:
         shell: powershell
         run: powershell -ExecutionPolicy Bypass -File Sandbox/check-template.ps1
 
-  # First verification outside Windows. The Sandbox tools build for linux-x64 through BrutalRid
-  # (Sandbox/Directory.Build.props). Not run here: Vulkan (no GPU or loader), ExportAudit (it audits the win-x64
-  # DLLs, which the Windows job already does) and check-template.ps1 (the template is win-x64 only).
+  # Same verify.ps1 as the Windows job, under pwsh. The Sandbox tools build for linux-x64 through BrutalRid
+  # (Sandbox/Directory.Build.props). Off Windows, verify.ps1 prints SKIP for ExportAudit (it audits the win-x64 DLLs,
+  # which the Windows job already does) and the skeleton checks (win-x64 only); -NoVulkan skips Vulkan (no GPU).
+  # Running the script here also guards its Linux fix: a child script that can't start reports FAIL, not PASS.
   linux:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -86,40 +87,6 @@ jobs:
       - name: Install GNU screen (a terminal for the NotCurses recipe 7.43)
         run: sudo apt-get install -y -q screen
 
-      - name: Build Sandbox (linux-x64)
-        id: build
-        run: dotnet build Sandbox/Sandbox.slnx -c Release -nologo -v quiet
-
-      - name: RecipeCheck --no-window --no-vulkan
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: dotnet run -c Release --no-build --project Sandbox/RecipeCheck -- --no-window --no-vulkan
-
-      - name: NetSession (host + client processes)
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: dotnet run -c Release --no-build --project Sandbox/NetSession
-
-      # Upstream's own samples, at the versions the skill is verified against (headless ones only).
-      - name: SampleCheck -NoWindow -NoVulkan -NoAudio
-        if: ${{ !cancelled() }}
-        shell: pwsh
-        run: ./Sandbox/SampleCheck.ps1 -NoWindow -NoVulkan -NoAudio
-
-      - name: AnalyzerDump
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: |
-          dotnet run -c Release --no-build --project Sandbox/AnalyzerDump | tee rules.txt
-          test "$(grep -c '^BRUTALCORE[0-9]\{4\}' rules.txt)" -gt 0
-
-      - name: FixedProbe
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: |
-          dotnet run -c Release --no-build --project Sandbox/FixedProbe
-          out=$(dotnet build Sandbox/FixedProbe -c Release -nologo -p:ProbeErrors=true 2>&1 || true)   # must fail
-          ids=$(echo "$out" | grep -o 'error BRUTALCORE[0-9]*' | sort -u | cut -d' ' -f2 | xargs || true)
-          echo "error build gave: $ids"
-          test "$ids" = "BRUTALCORE0009 BRUTALCORE0010"
-
-      - name: Skill lint
-        if: ${{ !cancelled() }}
-        shell: pwsh
-        run: ./Sandbox/lint-skill.ps1
+      # Exit code = number of failed checks. Skipped tools print SKIP, never PASS.
+      - name: verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio
+        run: pwsh -File Sandbox/verify.ps1 -NoWindow -NoVulkan -NoDialog -NoAudio
