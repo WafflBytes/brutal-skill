@@ -6,7 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- Override for other platforms: -p:BrutalRid=linux-x64 or the BrutalRid environment variable (CI's Linux job). -->
+    <!-- Override for other platforms: -p:BrutalRid=linux-x64 or the BrutalRid environment variable (CI's Linux job).
+         Without one, Linux and macOS build for their own OS, so verify.ps1 there doesn't run win-x64 builds. -->
+    <BrutalArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</BrutalArch>
+    <BrutalRid Condition="'$(BrutalRid)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">linux-$(BrutalArch)</BrutalRid>
+    <BrutalRid Condition="'$(BrutalRid)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">osx-$(BrutalArch)</BrutalRid>
     <BrutalRid Condition="'$(BrutalRid)' == ''">win-x64</BrutalRid>
     <RuntimeIdentifier>$(BrutalRid)</RuntimeIdentifier>
     <SelfContained>false</SelfContained>

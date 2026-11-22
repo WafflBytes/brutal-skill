@@ -4,7 +4,8 @@
 # The samples are copied to a temp folder (outside Sandbox/, so Directory.Build.props doesn't apply) and each
 # `#:package` line is rewritten to the version in ExportAudit/ExportAudit.csproj. -Pinned keeps upstream's versions.
 # Windowed samples run for -Seconds, get a screenshot (Windows), then a close request; they pass if the window drew
-# something, closed cleanly and printed no exception. -NoWindow/-NoVulkan/-NoAudio skip those kinds (CI).
+# something, closed cleanly and printed no exception. Off Windows they're killed after -Seconds and print SKIP (FAIL if
+# they exited early or threw). -NoWindow/-NoVulkan/-NoAudio skip those kinds (CI).
 param([switch]$NoWindow, [switch]$NoVulkan, [switch]$NoAudio, [switch]$Pinned, [string[]]$Only, [int]$Seconds = 6)
 
 $ErrorActionPreference = 'Stop'
@@ -120,7 +121,7 @@ foreach ($f in $files) {
 
     Write-Host "== $name ($kind) =="
     $bin = Join-Path $dir 'bin'
-    $build = dotnet build $src -o $bin -nologo -v quiet 2>&1
+    $build = dotnet build $src -o $bin --nologo -v quiet 2>&1   # not -nologo: some SDKs (10.0.113) then load the .cs as a project (MSB4025)
     if ($LASTEXITCODE -ne 0) {
         $build | Out-Host
         Report $name 'FAIL' ("build: " + (($build | Select-String ' error ' | Select-Object -First 1).Line -replace '^.*?error ', ''))
@@ -135,21 +136,24 @@ foreach ($f in $files) {
     if ($kind -like '*window') {
         Start-Sleep -Seconds $Seconds
         if ($proc.HasExited) { $state = 'FAIL'; $note = "exited after under $Seconds s (exit $($proc.ExitCode))" }
-        else {
+        elseif ($onWindows) {
             $state = 'PASS'
-            if ($onWindows) {
-                $png = Join-Path $shots "$name.png"
-                $count = Capture $proc $png
-                $need = if ($minColours.ContainsKey($name)) { $minColours[$name] } else { 2 }
-                if ($count -lt 0) { $state = 'FAIL'; $note = 'no window found' }
-                elseif ($count -lt $need) { $state = 'FAIL'; $note = "window shows $count colour(s), expected $need+" }
-                else { $note = "ran $Seconds s, $count colours on screen" }
-            }
-            else { $note = "ran $Seconds s (no screenshot off Windows)" }
+            $png = Join-Path $shots "$name.png"
+            $count = Capture $proc $png
+            $need = if ($minColours.ContainsKey($name)) { $minColours[$name] } else { 2 }
+            if ($count -lt 0) { $state = 'FAIL'; $note = 'no window found' }
+            elseif ($count -lt $need) { $state = 'FAIL'; $note = "window shows $count colour(s), expected $need+" }
+            else { $note = "ran $Seconds s, $count colours on screen" }
             [void]$proc.CloseMainWindow()
             if (-not $proc.WaitForExit(10000)) { $proc.Kill(); $state = 'FAIL'; $note += '; ignored the close request' }
             elseif ($proc.ExitCode -ne 0) { $state = 'FAIL'; $note += "; exit $($proc.ExitCode) after close" }
             else { $note += ', closed cleanly' }
+        }
+        else {
+            # Off Windows there's no capture, and CloseMainWindow does nothing (it posts WM_CLOSE). The sample ran without
+            # crashing, but neither drawing nor a clean close is checked: SKIP, unless it printed an exception (below).
+            $proc.Kill()
+            $state = 'SKIP'; $note = "ran $Seconds s; screenshot and close request are Windows only"
         }
     }
     else {
